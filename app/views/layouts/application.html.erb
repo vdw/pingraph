@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Pingraph" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Pingraph">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
+    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%# Includes all stylesheet files in app/assets/stylesheets %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="bg-gray-50 antialiased">
+    <%# Top navigation %>
+    <nav class="bg-white border-b border-gray-200 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-14">
+          <div class="flex items-center gap-6">
+            <%= link_to root_path, class: "flex items-center gap-2 font-bold text-indigo-600 text-lg" do %>
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+              Pingraph
+            <% end %>
+            <div class="hidden sm:flex items-center gap-4 text-sm">
+              <%= link_to "Dashboard", root_path,
+                    class: "text-gray-600 hover:text-indigo-600 font-medium transition-colors" %>
+              <%= link_to "Hosts", hosts_path,
+                    class: "text-gray-600 hover:text-indigo-600 font-medium transition-colors" %>
+              <%= link_to "Groups", groups_path,
+                    class: "text-gray-600 hover:text-indigo-600 font-medium transition-colors" %>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 text-sm">
+            <% if authenticated? %>
+              <%= button_to "Sign out", session_path, method: :delete,
+                    class: "text-gray-500 hover:text-red-600 font-medium cursor-pointer transition-colors" %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <%# Flash messages %>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
+      <% flash.each do |type, message| %>
+        <div class="rounded-md px-4 py-3 text-sm font-medium mb-3
+          <%= type.to_s == 'notice' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700' %>"
+          data-controller="autohide">
+          <%= message %>
+        </div>
+      <% end %>
+    </div>
+
+    <%# Page content %>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <%= yield %>
+    </main>
+  </body>
+</html>
