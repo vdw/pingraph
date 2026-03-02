@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${SKIP_TESTS:-0}" == "1" ]]; then
+  echo "[pre-commit] SKIP_TESTS=1 set; skipping tests."
+  exit 0
+fi
+
+echo "[pre-commit] Running test suite..."
+bin/rails test
