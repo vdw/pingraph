@@ -64,6 +64,30 @@ Open [http://localhost:3000](http://localhost:3000) and sign in:
 
 ---
 
+## Git Hooks
+
+Commits can automatically run the test suite via a repository-managed `pre-commit` hook.
+
+Enable it once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+This is also configured automatically when you run:
+
+```bash
+bin/setup --skip-server
+```
+
+To bypass the hook for an exceptional commit:
+
+```bash
+SKIP_TESTS=1 git commit -m "..."
+```
+
+---
+
 ## Docker
 
 The included `Dockerfile` builds a production image. The container needs `iputils-ping` and the `NET_RAW` Linux capability to send ICMP packets:
