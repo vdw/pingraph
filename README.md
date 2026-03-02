@@ -92,7 +92,30 @@ SKIP_TESTS=1 git commit -m "..."
 
 ## Docker
 
-The included `Dockerfile` builds a production image. The container needs `iputils-ping` and the `NET_RAW` Linux capability to send ICMP packets:
+The included `Dockerfile` builds a production image.
+
+Build and run locally:
+
+```bash
+docker build -t pingraph .
+docker run -d \
+  --name pingraph \
+  -p 3000:80 \
+  --cap-add=NET_RAW \
+  -e RAILS_MASTER_KEY="$(cat config/master.key)" \
+  -e SOLID_QUEUE_IN_PUMA=true \
+  -v pingraph_storage:/rails/storage \
+  pingraph
+```
+
+Container requirements:
+
+- `RAILS_MASTER_KEY` (production credentials)
+- `SOLID_QUEUE_IN_PUMA=true` (runs recurring scheduler + queue worker in single-container mode)
+- `NET_RAW` capability (required for ICMP ping)
+- Persistent volume for `/rails/storage` (SQLite + Solid Queue/Cache/Cable databases)
+
+Compose/Kamal capability setting:
 
 ```yaml
 # docker-compose or Kamal config
