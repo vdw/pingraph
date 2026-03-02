@@ -3,38 +3,38 @@
 <div class="w-full">
   <div class="flex items-center justify-between mb-8">
     <div>
-      <h1 class="text-3xl font-bold text-gray-900">Groups</h1>
-      <p class="text-sm text-gray-500 mt-1">Logical containers that organise your monitored hosts</p>
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Groups</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Logical containers that organise your monitored hosts</p>
     </div>
     <%= link_to "+ New Group", new_group_path,
           class: "inline-flex items-center rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors" %>
   </div>
 
   <% if @groups.any? %>
-    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-      <table class="min-w-full divide-y divide-gray-100">
-        <thead class="bg-gray-50">
+    <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+      <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-700/50">
           <tr>
-            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
-            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Hosts</th>
+            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Hosts</th>
             <th class="py-3 px-4"></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-50">
+        <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
           <% @groups.each do |group| %>
-            <tr class="hover:bg-gray-50 transition-colors">
-              <td class="py-3 px-4 font-medium text-gray-900">
-                <%= link_to group.name, group_path(group), class: "hover:text-indigo-600" %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+              <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">
+                <%= link_to group.name, group_path(group), class: "hover:text-indigo-600 dark:hover:text-indigo-400" %>
               </td>
-              <td class="py-3 px-4 text-sm text-gray-500">
+              <td class="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">
                 <%= pluralize(group.hosts.size, "host") %>
               </td>
               <td class="py-3 px-4 text-right">
                 <div class="inline-flex items-center gap-1">
                   <%= link_to "Edit", edit_group_path(group),
-                        class: "rounded-md px-2.5 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors" %>
+                        class: "rounded-md px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" %>
                   <%= button_to "Delete", group, method: :delete,
-                        class: "rounded-md px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors cursor-pointer",
+                        class: "rounded-md px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors cursor-pointer",
                         data: { turbo_confirm: "Delete group \"#{group.name}\" and all its hosts?" } %>
                 </div>
               </td>
@@ -44,8 +44,8 @@
       </table>
     </div>
   <% else %>
-    <div class="text-center py-24 bg-white rounded-xl border border-dashed border-gray-300">
-      <p class="text-gray-500 text-lg mb-4">No groups yet.</p>
+    <div class="text-center py-24 bg-white dark:bg-gray-900 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+      <p class="text-gray-500 dark:text-gray-400 text-lg mb-4">No groups yet.</p>
       <%= link_to "Create your first group →", new_group_path,
             class: "inline-block rounded-md bg-indigo-600 px-4 py-2 text-white font-medium hover:bg-indigo-500" %>
     </div>

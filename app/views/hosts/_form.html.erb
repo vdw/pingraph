@@ -1,10 +1,10 @@
 <%= form_with(model: host) do |form| %>
   <% if host.errors.any? %>
-    <div class="mb-5 rounded-lg bg-red-50 border border-red-200 px-4 py-3">
-      <p class="text-sm font-semibold text-red-700 mb-1">
+    <div class="mb-5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3">
+      <p class="text-sm font-semibold text-red-700 dark:text-red-400 mb-1">
         <%= pluralize(host.errors.count, "error") %> prevented this host from being saved:
       </p>
-      <ul class="list-disc ml-4 text-sm text-red-600 space-y-0.5">
+      <ul class="list-disc ml-4 text-sm text-red-600 dark:text-red-400 space-y-0.5">
         <% host.errors.each do |error| %>
           <li><%= error.full_message %></li>
         <% end %>
@@ -14,44 +14,44 @@
 
   <div class="space-y-5">
     <div>
-      <%= form.label :name, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= form.label :name, class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
       <%= form.text_field :name,
             placeholder: "e.g. Cloudflare DNS",
-            class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm",
+            class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500",
                     "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
-                    host.errors[:name].any? ? "border-red-400" : "border-gray-300"] %>
+                    host.errors[:name].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
     </div>
 
     <div>
-      <%= form.label :address, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= form.label :address, class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
       <%= form.text_field :address,
             placeholder: "e.g. 1.1.1.1 or google.com",
-            class: ["block w-full rounded-lg border px-3 py-2 text-sm font-mono shadow-sm",
+            class: ["block w-full rounded-lg border px-3 py-2 text-sm font-mono shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500",
                     "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
-                    host.errors[:address].any? ? "border-red-400" : "border-gray-300"] %>
+                    host.errors[:address].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
     </div>
 
     <div>
-      <%= form.label :group_id, "Group", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= form.label :group_id, "Group", class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
       <%= form.collection_select :group_id, Group.order(:name), :id, :name,
             { prompt: "Select a group" },
-            class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white",
+            class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white",
                     "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
-                    host.errors[:group_id].any? ? "border-red-400" : "border-gray-300"] %>
+                    host.errors[:group_id].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
     </div>
 
     <div>
-      <%= form.label :interval, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= form.label :interval, class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
       <div class="relative">
         <%= form.number_field :interval,
               min: 10,
               placeholder: "60",
-              class: ["block w-full rounded-lg border px-3 py-2 pr-14 text-sm shadow-sm",
+              class: ["block w-full rounded-lg border px-3 py-2 pr-14 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white",
                       "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
-                      host.errors[:interval].any? ? "border-red-400" : "border-gray-300"] %>
-        <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-400">seconds</span>
+                      host.errors[:interval].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
+        <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-400 dark:text-gray-500">seconds</span>
       </div>
-      <p class="mt-1 text-xs text-gray-400">Minimum 10 seconds</p>
+      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Minimum 10 seconds</p>
     </div>
   </div>
 

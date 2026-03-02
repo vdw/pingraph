@@ -34,6 +34,13 @@ export default class extends Controller {
   }
 
   renderChart(data) {
+    const dark = document.documentElement.classList.contains("dark")
+    const gridColor   = dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)"
+    const textColor   = dark ? "rgba(156,163,175,1)"   : "rgba(107,114,128,1)"
+    const avgColor    = dark ? "rgba(129,140,248,1)"   : "rgba(99,102,241,1)"
+    const envBorder   = dark ? "rgba(129,140,248,0.3)" : "rgba(99,102,241,0.2)"
+    const envFill     = dark ? "rgba(129,140,248,0.12)": "rgba(99,102,241,0.15)"
+
     const labels = data.map(p => {
       const d = new Date(p.recorded_at)
       return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
@@ -51,8 +58,8 @@ export default class extends Controller {
             // Smoke envelope — max boundary (filled down to min)
             label: "Max RTT",
             data: max,
-            borderColor: "rgba(99,102,241,0.2)",
-            backgroundColor: "rgba(99,102,241,0.15)",
+            borderColor: envBorder,
+            backgroundColor: envFill,
             borderWidth: 1,
             pointRadius: 0,
             fill: "+1",   // fill toward the next dataset (min)
@@ -62,7 +69,7 @@ export default class extends Controller {
             // Smoke envelope — min boundary
             label: "Min RTT",
             data: min,
-            borderColor: "rgba(99,102,241,0.2)",
+            borderColor: envBorder,
             backgroundColor: "transparent",
             borderWidth: 1,
             pointRadius: 0,
@@ -73,7 +80,7 @@ export default class extends Controller {
             // Average — the bold centerline
             label: "Avg RTT (ms)",
             data: avg,
-            borderColor: "rgba(99,102,241,1)",
+            borderColor: avgColor,
             backgroundColor: "transparent",
             borderWidth: 2,
             pointRadius: 2,
@@ -89,7 +96,10 @@ export default class extends Controller {
         plugins: {
           legend: {
             display: true,
-            labels: { filter: item => item.text !== "Min RTT" && item.text !== "Max RTT" }
+            labels: {
+              color: textColor,
+              filter: item => item.text !== "Min RTT" && item.text !== "Max RTT"
+            }
           },
           tooltip: {
             callbacks: {
@@ -102,13 +112,14 @@ export default class extends Controller {
         },
         scales: {
           x: {
-            grid: { color: "rgba(0,0,0,0.05)" },
-            ticks: { maxTicksLimit: 8, maxRotation: 0 }
+            grid: { color: gridColor },
+            ticks: { maxTicksLimit: 8, maxRotation: 0, color: textColor }
           },
           y: {
-            title: { display: true, text: "Latency (ms)" },
+            title: { display: true, text: "Latency (ms)", color: textColor },
             min: 0,
-            grid: { color: "rgba(0,0,0,0.05)" }
+            grid: { color: gridColor },
+            ticks: { color: textColor }
           }
         }
       }
