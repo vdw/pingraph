@@ -94,6 +94,20 @@ SKIP_TESTS=1 git commit -m "..."
 
 The included `Dockerfile` builds a production image.
 
+Prebuilt images are also published by GitHub Actions on every push to `main`:
+
+```bash
+docker pull ghcr.io/vdw/pingraph:latest
+docker run -d \
+  --name pingraph \
+  -p 3000:80 \
+  --cap-add=NET_RAW \
+  -e RAILS_MASTER_KEY="<your master key>" \
+  -e SOLID_QUEUE_IN_PUMA=true \
+  -v pingraph_storage:/rails/storage \
+  ghcr.io/vdw/pingraph:latest
+```
+
 Build and run locally:
 
 ```bash
