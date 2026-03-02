@@ -1,5 +1,7 @@
 # Pingraph
 
+[![CI](https://github.com/vdw/pingraph/actions/workflows/ci.yml/badge.svg)](https://github.com/vdw/pingraph/actions/workflows/ci.yml)
+
 A modern, self-hosted network latency monitor for homelabs. Pingraph is a lightweight alternative to [SmokePing](https://oss.oetiker.ch/smokeping/) with a web-first configuration experience — no flat-file configs, no legacy CGI setup.
 
 Organize hosts into groups, visualize latency trends with smoke-style charts (min/avg/max RTT over time), and monitor packet loss — all from a clean Tailwind UI.
