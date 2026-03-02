@@ -1,29 +1,59 @@
 <% content_for :title, "Hosts" %>
 
 <div class="w-full">
-  <% if notice.present? %>
-    <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-md inline-block" id="notice"><%= notice %></p>
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Hosts</h1>
+      <p class="text-sm text-gray-500 mt-1">All monitored targets across every group</p>
+    </div>
+    <%= link_to "+ New Host", new_host_path,
+          class: "inline-flex items-center rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors" %>
+  </div>
+
+  <% if @hosts.any? %>
+    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <table class="min-w-full divide-y divide-gray-100">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Host</th>
+            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Address</th>
+            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Group</th>
+            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Interval</th>
+            <th class="py-3 px-4"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          <% @hosts.each do |host| %>
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="py-3 px-4 font-medium text-gray-900">
+                <%= link_to host.name, host_path(host), class: "hover:text-indigo-600" %>
+              </td>
+              <td class="py-3 px-4 text-sm text-gray-500 font-mono"><%= host.address %></td>
+              <td class="py-3 px-4">
+                <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+                  <%= host.group.name %>
+                </span>
+              </td>
+              <td class="py-3 px-4 text-sm text-gray-500"><%= host.interval %>s</td>
+              <td class="py-3 px-4 text-right">
+                <div class="inline-flex items-center gap-1">
+                  <%= link_to "Edit", edit_host_path(host),
+                        class: "rounded-md px-2.5 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors" %>
+                  <%= button_to "Delete", host, method: :delete,
+                        class: "rounded-md px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors cursor-pointer",
+                        data: { turbo_confirm: "Delete host \"#{host.name}\"? This will remove all ping history." } %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="text-center py-24 bg-white rounded-xl border border-dashed border-gray-300">
+      <p class="text-gray-500 text-lg mb-4">No hosts yet.</p>
+      <%= link_to "Add your first host →", new_host_path,
+            class: "inline-block rounded-md bg-indigo-600 px-4 py-2 text-white font-medium hover:bg-indigo-500" %>
+    </div>
   <% end %>
-
-  <div class="flex justify-between items-center">
-    <h1 class="font-bold text-4xl">Hosts</h1>
-    <%= link_to "New host", new_host_path, class: "rounded-md px-3.5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white block font-medium" %>
-  </div>
-
-  <div id="hosts" class="min-w-full divide-y divide-gray-200 space-y-5">
-    <% if @hosts.any? %>
-      <% @hosts.each do |host| %>
-        <div class="flex flex-col sm:flex-row justify-between items-center pb-5 sm:pb-0">
-          <%= render host %>
-          <div class="w-full sm:w-auto flex flex-col sm:flex-row space-x-2 space-y-2">
-            <%= link_to "Show", host, class: "w-full sm:w-auto text-center rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
-            <%= link_to "Edit", edit_host_path(host), class: "w-full sm:w-auto text-center rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
-            <%= button_to "Destroy", host, method: :delete, class: "w-full sm:w-auto rounded-md px-3.5 py-2.5 text-white bg-red-600 hover:bg-red-500 font-medium cursor-pointer", data: { turbo_confirm: "Are you sure?" } %>
-          </div>
-        </div>
-      <% end %>
-    <% else %>
-      <p class="text-center my-10">No hosts found.</p>
-    <% end %>
-  </div>
 </div>
