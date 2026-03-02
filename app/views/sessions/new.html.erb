@@ -1,0 +1,38 @@
+<div class="min-h-[70vh] flex items-center justify-center">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-indigo-600">Pingraph</h1>
+      <p class="text-gray-500 text-sm mt-1">Network latency monitor</p>
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
+      <h2 class="text-lg font-semibold text-gray-800 mb-6">Sign in</h2>
+
+      <%= form_with url: session_url, class: "space-y-5" do |form| %>
+        <div>
+          <%= form.label :email_address, "Email", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= form.email_field :email_address, required: true, autofocus: true,
+                autocomplete: "username",
+                placeholder: "admin@pingraph.local",
+                value: params[:email_address],
+                class: "block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" %>
+        </div>
+
+        <div>
+          <%= form.label :password, "Password", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= form.password_field :password, required: true,
+                autocomplete: "current-password",
+                maxlength: 72,
+                class: "block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" %>
+        </div>
+
+        <%= form.submit "Sign in",
+              class: "w-full rounded-md bg-indigo-600 hover:bg-indigo-500 px-4 py-2.5 text-white font-semibold cursor-pointer transition-colors" %>
+      <% end %>
+
+      <p class="text-sm text-center text-gray-400 mt-4">
+        <%= link_to "Forgot password?", new_password_path, class: "text-indigo-600 hover:text-indigo-500" %>
+      </p>
+    </div>
+  </div>
+</div>

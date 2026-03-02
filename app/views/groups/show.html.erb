@@ -1,0 +1,43 @@
+<% content_for :title, @group.name %>
+
+<div class="w-full max-w-4xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900"><%= @group.name %></h1>
+      <p class="text-sm text-gray-400 mt-0.5"><%= pluralize(@group.hosts.size, "host") %></p>
+    </div>
+    <div class="flex gap-2">
+      <%= link_to "Edit", edit_group_path(@group),
+            class: "rounded-md px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 font-medium text-gray-700" %>
+      <%= button_to "Delete", @group, method: :delete,
+            class: "rounded-md px-3 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-700 font-medium cursor-pointer",
+            data: { turbo_confirm: "Delete group \"#{@group.name}\" and all its hosts?" } %>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4">
+    <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+      <h2 class="text-sm font-semibold text-gray-600">Hosts</h2>
+      <%= link_to "+ Add Host", new_host_path(host: { group_id: @group.id }),
+            class: "text-xs text-indigo-600 hover:text-indigo-500 font-medium" %>
+    </div>
+    <% if @group.hosts.any? %>
+      <ul class="divide-y divide-gray-50">
+        <% @group.hosts.each do |host| %>
+          <li class="flex items-center justify-between px-5 py-3">
+            <div>
+              <span class="font-medium text-gray-900"><%= host.name %></span>
+              <span class="text-xs text-gray-400 font-mono ml-2"><%= host.address %></span>
+            </div>
+            <%= link_to "View", host_path(host),
+                  class: "text-xs text-indigo-600 hover:text-indigo-500 font-medium" %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="text-sm text-gray-400 text-center py-8">No hosts in this group yet.</p>
+    <% end %>
+  </div>
+
+  <%= link_to "← Back to Groups", groups_path, class: "text-sm text-indigo-600 hover:text-indigo-500 font-medium" %>
+</div>

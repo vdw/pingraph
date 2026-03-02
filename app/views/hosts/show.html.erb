@@ -1,0 +1,95 @@
+<% content_for :title, @host.name %>
+
+<div class="w-full max-w-5xl mx-auto">
+  <%# Header %>
+  <div class="flex items-start justify-between mb-6">
+    <div>
+      <div class="flex items-center gap-3 mb-1">
+        <% status = @host.status %>
+        <span class="w-3 h-3 rounded-full flex-shrink-0
+          <%= status == :up ? 'bg-green-400' :
+              status == :degraded ? 'bg-yellow-400' :
+              status == :down ? 'bg-red-500' :
+              'bg-gray-300' %>">
+        </span>
+        <h1 class="text-2xl font-bold text-gray-900"><%= @host.name %></h1>
+        <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+          <%= @host.group.name %>
+        </span>
+      </div>
+      <p class="text-sm text-gray-500 font-mono pl-6"><%= @host.address %></p>
+      <p class="text-xs text-gray-400 pl-6 mt-0.5">Polled every <%= @host.interval %> seconds</p>
+    </div>
+    <div class="flex gap-2">
+      <%= link_to "Edit", edit_host_path(@host),
+            class: "rounded-md px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 font-medium text-gray-700" %>
+      <%= button_to "Delete", @host, method: :delete,
+            class: "rounded-md px-3 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-700 font-medium cursor-pointer",
+            data: { turbo_confirm: "Delete #{@host.name}? This will remove all ping history." } %>
+    </div>
+  </div>
+
+  <%# Smoke chart %>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
+    <h2 class="text-sm font-semibold text-gray-600 mb-4">Latency over time (last 200 probes)</h2>
+    <div data-chart-container class="relative h-64">
+      <canvas
+        data-controller="ping-chart"
+        data-ping-chart-url-value="<%= pings_data_host_path(@host, format: :json) %>">
+      </canvas>
+    </div>
+  </div>
+
+  <%# Recent pings table %>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+      <h2 class="text-sm font-semibold text-gray-600">Recent probes</h2>
+      <span class="text-xs text-gray-400">Last 20 results</span>
+    </div>
+    <% if @recent_pings.any? %>
+      <table class="min-w-full divide-y divide-gray-100">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Time</th>
+            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Avg RTT</th>
+            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Min</th>
+            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Max</th>
+            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Packet Loss</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          <% @recent_pings.each do |ping| %>
+            <tr class="hover:bg-gray-50">
+              <td class="py-2.5 px-4 text-sm text-gray-500 font-mono">
+                <%= ping.recorded_at.strftime("%Y-%m-%d %H:%M:%S") %>
+              </td>
+              <td class="py-2.5 px-4 text-sm font-medium text-gray-900">
+                <%= ping.latency ? "#{"%.2f" % ping.latency} ms" : "—" %>
+              </td>
+              <td class="py-2.5 px-4 text-sm text-gray-500">
+                <%= ping.min_latency ? "#{"%.2f" % ping.min_latency} ms" : "—" %>
+              </td>
+              <td class="py-2.5 px-4 text-sm text-gray-500">
+                <%= ping.max_latency ? "#{"%.2f" % ping.max_latency} ms" : "—" %>
+              </td>
+              <td class="py-2.5 px-4">
+                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
+                  <%= ping.packet_loss == 0 ? 'bg-green-50 text-green-700' :
+                      ping.packet_loss.to_i < 50 ? 'bg-yellow-50 text-yellow-700' :
+                      'bg-red-50 text-red-700' %>">
+                  <%= ping.packet_loss %>%
+                </span>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p class="text-sm text-gray-400 text-center py-8">No probes yet. They will appear here once Solid Queue starts polling.</p>
+    <% end %>
+  </div>
+
+  <div class="mt-4">
+    <%= link_to "← Back to Dashboard", root_path, class: "text-sm text-indigo-600 hover:text-indigo-500 font-medium" %>
+  </div>
+</div>

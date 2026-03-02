@@ -1,0 +1,10 @@
+<div id="<%= dom_id host %>" class="w-full sm:w-auto my-5 space-y-2">
+  <p class="font-semibold text-gray-900"><%= host.name %></p>
+  <p class="text-sm text-gray-500 font-mono"><%= host.address %></p>
+  <p class="text-xs text-gray-400">
+    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-indigo-700 font-medium mr-2">
+      <%= host.group.name %>
+    </span>
+    Polled every <%= host.interval %>s
+  </p>
+</div>
