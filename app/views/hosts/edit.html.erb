@@ -2,20 +2,20 @@
 
 <div class="max-w-xl">
   <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Edit Host</h1>
-    <p class="text-sm text-gray-500 mt-1">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Edit Host</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
       Editing
-      <span class="font-medium text-gray-700"><%= @host.name %></span>
-      <span class="text-gray-400 font-mono text-xs ml-1">(<%= @host.address %>)</span>
+      <span class="font-medium text-gray-700 dark:text-gray-200"><%= @host.name %></span>
+      <span class="text-gray-400 dark:text-gray-500 font-mono text-xs ml-1">(<%= @host.address %>)</span>
     </p>
   </div>
 
-  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
     <%= render "form", host: @host %>
   </div>
 
   <div class="mt-4 flex gap-4">
     <%= link_to "← Back to Host", @host, class: "text-sm text-indigo-600 hover:text-indigo-500 font-medium" %>
-    <%= link_to "All Hosts", hosts_path, class: "text-sm text-gray-500 hover:text-gray-700 font-medium" %>
+    <%= link_to "All Hosts", hosts_path, class: "text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium" %>
   </div>
 </div>
