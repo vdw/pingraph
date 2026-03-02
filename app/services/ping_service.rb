@@ -5,10 +5,18 @@ class PingService
   PACKET_COUNT = 5
   # Timeout per packet (seconds)
   PACKET_TIMEOUT = 2
+  # Hard timeout for the whole command (seconds)
+  COMMAND_DEADLINE = PACKET_COUNT * PACKET_TIMEOUT
 
   def self.execute(host)
-    command = "ping -c #{PACKET_COUNT} -q -W #{PACKET_TIMEOUT} #{host.address}"
-    raw_output, _stderr, status = Open3.capture3(command)
+    raw_output, _stderr, status = Open3.capture3(
+      "ping",
+      "-c", PACKET_COUNT.to_s,
+      "-q",
+      "-W", PACKET_TIMEOUT.to_s,
+      "-w", COMMAND_DEADLINE.to_s,
+      host.address
+    )
 
     # exit 0 = all packets received, exit 1 = partial loss — both are parseable
     if status.exitstatus == 0 || status.exitstatus == 1
