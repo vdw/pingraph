@@ -1,9 +1,16 @@
-<% content_for :title, "New host" %>
+<% content_for :title, "New Host" %>
 
-<div class="md:w-2/3 w-full">
-  <h1 class="font-bold text-4xl">New host</h1>
+<div class="max-w-xl">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">New Host</h1>
+    <p class="text-sm text-gray-500 mt-1">Add a target to monitor with ICMP probes.</p>
+  </div>
 
-  <%= render "form", host: @host %>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+    <%= render "form", host: @host %>
+  </div>
 
-  <%= link_to "Back to hosts", hosts_path, class: "w-full sm:w-auto text-center mt-2 sm:mt-0 sm:ml-2 rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
+  <div class="mt-4">
+    <%= link_to "← Back to Hosts", hosts_path, class: "text-sm text-indigo-600 hover:text-indigo-500 font-medium" %>
+  </div>
 </div>

@@ -1,9 +1,10 @@
-<%= form_with(model: host, class: "contents") do |form| %>
+<%= form_with(model: host) do |form| %>
   <% if host.errors.any? %>
-    <div id="error_explanation" class="bg-red-50 text-red-500 px-3 py-2 font-medium rounded-md mt-3">
-      <h2><%= pluralize(host.errors.count, "error") %> prohibited this host from being saved:</h2>
-
-      <ul class="list-disc ml-6">
+    <div class="mb-5 rounded-lg bg-red-50 border border-red-200 px-4 py-3">
+      <p class="text-sm font-semibold text-red-700 mb-1">
+        <%= pluralize(host.errors.count, "error") %> prevented this host from being saved:
+      </p>
+      <ul class="list-disc ml-4 text-sm text-red-600 space-y-0.5">
         <% host.errors.each do |error| %>
           <li><%= error.full_message %></li>
         <% end %>
@@ -11,31 +12,50 @@
     </div>
   <% end %>
 
-  <div class="my-5">
-    <%= form.label :name %>
-    <%= form.text_field :name, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": host.errors[:name].none?, "border-red-400 focus:outline-red-600": host.errors[:name].any?}] %>
+  <div class="space-y-5">
+    <div>
+      <%= form.label :name, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= form.text_field :name,
+            placeholder: "e.g. Cloudflare DNS",
+            class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm",
+                    "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
+                    host.errors[:name].any? ? "border-red-400" : "border-gray-300"] %>
+    </div>
+
+    <div>
+      <%= form.label :address, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= form.text_field :address,
+            placeholder: "e.g. 1.1.1.1 or google.com",
+            class: ["block w-full rounded-lg border px-3 py-2 text-sm font-mono shadow-sm",
+                    "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
+                    host.errors[:address].any? ? "border-red-400" : "border-gray-300"] %>
+    </div>
+
+    <div>
+      <%= form.label :group_id, "Group", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= form.collection_select :group_id, Group.order(:name), :id, :name,
+            { prompt: "Select a group" },
+            class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white",
+                    "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
+                    host.errors[:group_id].any? ? "border-red-400" : "border-gray-300"] %>
+    </div>
+
+    <div>
+      <%= form.label :interval, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <div class="relative">
+        <%= form.number_field :interval,
+              min: 10,
+              placeholder: "60",
+              class: ["block w-full rounded-lg border px-3 py-2 pr-14 text-sm shadow-sm",
+                      "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
+                      host.errors[:interval].any? ? "border-red-400" : "border-gray-300"] %>
+        <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-400">seconds</span>
+      </div>
+      <p class="mt-1 text-xs text-gray-400">Minimum 10 seconds</p>
+    </div>
   </div>
 
-  <div class="my-5">
-    <%= form.label :address %>
-    <%= form.text_field :address, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": host.errors[:address].none?, "border-red-400 focus:outline-red-600": host.errors[:address].any?}] %>
-  </div>
-
-  <div class="my-5">
-    <%= form.label :interval %>
-    <%= form.number_field :interval, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": host.errors[:interval].none?, "border-red-400 focus:outline-red-600": host.errors[:interval].any?}] %>
-  </div>
-
-  <div class="my-5">
-    <%= form.label :group_id, "Group" %>
-    <%= form.collection_select :group_id, Group.order(:name), :id, :name,
-          { prompt: "Select a group" },
-          class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full",
-                  {"border-gray-400 focus:outline-blue-600": host.errors[:group_id].none?,
-                   "border-red-400 focus:outline-red-600": host.errors[:group_id].any?}] %>
-  </div>
-
-  <div class="inline">
-    <%= form.submit class: "w-full sm:w-auto rounded-md px-3.5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white inline-block font-medium cursor-pointer" %>
+  <div class="mt-6 flex items-center gap-3">
+    <%= form.submit class: "rounded-lg bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm cursor-pointer transition-colors" %>
   </div>
 <% end %>

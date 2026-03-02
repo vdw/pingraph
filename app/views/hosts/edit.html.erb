@@ -1,10 +1,21 @@
-<% content_for :title, "Editing host" %>
+<% content_for :title, "Edit #{@host.name}" %>
 
-<div class="md:w-2/3 w-full">
-  <h1 class="font-bold text-4xl">Editing host</h1>
+<div class="max-w-xl">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Edit Host</h1>
+    <p class="text-sm text-gray-500 mt-1">
+      Editing
+      <span class="font-medium text-gray-700"><%= @host.name %></span>
+      <span class="text-gray-400 font-mono text-xs ml-1">(<%= @host.address %>)</span>
+    </p>
+  </div>
 
-  <%= render "form", host: @host %>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+    <%= render "form", host: @host %>
+  </div>
 
-  <%= link_to "Show this host", @host, class: "w-full sm:w-auto text-center mt-2 sm:mt-0 sm:ml-2 rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
-  <%= link_to "Back to hosts", hosts_path, class: "w-full sm:w-auto text-center mt-2 sm:mt-0 sm:ml-2 rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
+  <div class="mt-4 flex gap-4">
+    <%= link_to "← Back to Host", @host, class: "text-sm text-indigo-600 hover:text-indigo-500 font-medium" %>
+    <%= link_to "All Hosts", hosts_path, class: "text-sm text-gray-500 hover:text-gray-700 font-medium" %>
+  </div>
 </div>

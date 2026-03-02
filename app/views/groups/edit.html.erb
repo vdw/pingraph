@@ -1,10 +1,19 @@
-<% content_for :title, "Editing group" %>
+<% content_for :title, "Edit #{@group.name}" %>
 
-<div class="md:w-2/3 w-full">
-  <h1 class="font-bold text-4xl">Editing group</h1>
+<div class="max-w-xl">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Edit Group</h1>
+    <p class="text-sm text-gray-500 mt-1">
+      Editing <span class="font-medium text-gray-700"><%= @group.name %></span>
+    </p>
+  </div>
 
-  <%= render "form", group: @group %>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+    <%= render "form", group: @group %>
+  </div>
 
-  <%= link_to "Show this group", @group, class: "w-full sm:w-auto text-center mt-2 sm:mt-0 sm:ml-2 rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
-  <%= link_to "Back to groups", groups_path, class: "w-full sm:w-auto text-center mt-2 sm:mt-0 sm:ml-2 rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
+  <div class="mt-4 flex gap-4">
+    <%= link_to "← Back to Group", @group, class: "text-sm text-indigo-600 hover:text-indigo-500 font-medium" %>
+    <%= link_to "All Groups", groups_path, class: "text-sm text-gray-500 hover:text-gray-700 font-medium" %>
+  </div>
 </div>
