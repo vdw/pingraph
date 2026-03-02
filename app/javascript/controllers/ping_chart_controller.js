@@ -48,6 +48,10 @@ export default class extends Controller {
     const avg    = data.map(p => p.latency)
     const min    = data.map(p => p.min_latency)
     const max    = data.map(p => p.max_latency)
+    const latestAvg = [...avg].reverse().find(value => value !== null && value !== undefined)
+    const avgLabel = latestAvg !== undefined
+      ? `Avg RTT: ${latestAvg.toFixed(2)} ms`
+      : "Avg RTT (ms)"
 
     this.chart = new Chart(this.element, {
       type: "line",
@@ -78,7 +82,7 @@ export default class extends Controller {
           },
           {
             // Average — the bold centerline
-            label: "Avg RTT (ms)",
+            label: avgLabel,
             data: avg,
             borderColor: avgColor,
             backgroundColor: "transparent",
