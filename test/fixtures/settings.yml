@@ -1,0 +1,2 @@
+default:
+  ping_retention_days: 90
