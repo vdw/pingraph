@@ -1,0 +1,44 @@
+<% content_for :title, "Settings" %>
+
+<div class="max-w-xl">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+      Global configuration shared by all users.
+    </p>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+    <%= form_with model: @setting, url: settings_path, method: :patch do |form| %>
+      <% if @setting.errors.any? %>
+        <div class="mb-5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3">
+          <p class="text-sm font-semibold text-red-700 dark:text-red-400 mb-1">
+            <%= pluralize(@setting.errors.count, "error") %> prevented these settings from being saved:
+          </p>
+          <ul class="list-disc ml-4 text-sm text-red-600 dark:text-red-400 space-y-0.5">
+            <% @setting.errors.each do |error| %>
+              <li><%= error.full_message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <div>
+        <%= form.label :ping_retention_days, "Ping retention", class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
+        <%= form.select :ping_retention_days,
+              options_for_select(Setting::RETENTION_OPTIONS.map { |days| [ "#{days} days", days ] }, @setting.ping_retention_days),
+              {},
+              class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white",
+                      "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
+                      @setting.errors[:ping_retention_days].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
+        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+          Deletes pings older than this threshold during the nightly cleanup job (2:00 AM).
+        </p>
+      </div>
+
+      <div class="mt-6">
+        <%= form.submit "Save settings", class: "rounded-lg bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm cursor-pointer transition-colors" %>
+      </div>
+    <% end %>
+  </div>
+</div>

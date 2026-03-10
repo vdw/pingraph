@@ -1,11 +1,10 @@
 class CleanupPingsJob < ApplicationJob
   queue_as :default
 
-  RETENTION_DAYS = 90
   BATCH_SIZE = 1000
 
   def perform
-    cutoff = RETENTION_DAYS.days.ago
+    cutoff = retention_days.days.ago
     latest_ids = Ping.connection.select_values(<<~SQL)
       SELECT p1.id
       FROM pings p1
@@ -27,4 +26,11 @@ class CleanupPingsJob < ApplicationJob
 
     scope.in_batches(of: BATCH_SIZE) { |batch| batch.delete_all }
   end
+
+  private
+    def retention_days
+      Setting.current.ping_retention_days
+    rescue ActiveRecord::ActiveRecordError
+      Setting::DEFAULT_RETENTION_DAYS
+    end
 end
