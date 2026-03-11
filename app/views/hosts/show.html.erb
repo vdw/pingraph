@@ -30,15 +30,9 @@
   </div>
 
   <%# Smoke chart %>
-  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-6">
-    <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-4">Latency over time (last 200 probes)</h2>
-    <div data-chart-container class="relative h-64">
-      <canvas
-        data-controller="ping-chart"
-        data-ping-chart-url-value="<%= pings_data_host_path(@host, format: :json) %>">
-      </canvas>
-    </div>
-  </div>
+  <%= turbo_frame_tag "host_ping_chart" do %>
+    <%= render "ping_chart_panel", host: @host, chart_window: @chart_window, chart_resolution: @chart_resolution %>
+  <% end %>
 
   <%# Recent pings table %>
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
