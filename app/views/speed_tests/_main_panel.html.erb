@@ -1,0 +1,53 @@
+<% running = selected_host&.speed_test_in_progress? %>
+
+<div id="speed_test_main_panel"
+     data-controller="speed-test-status"
+     data-speed-test-status-refresh-url-value="<%= panel_speed_tests_path(host_id: selected_host&.id, format: :turbo_stream) %>"
+     data-speed-test-status-running-value="<%= running %>"
+     data-speed-test-status-interval-value="3000"
+     class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
+  <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+    <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Speed Tests</h1>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+      Run on-demand iperf3 tests per host.
+      <a href="https://software.es.net/iperf/invoking.html"
+         target="_blank"
+         rel="noopener noreferrer"
+         class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 underline decoration-dotted underline-offset-2">
+        What is iperf3?
+      </a>
+    </p>
+    <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+      Note: Docker bridge/NAT networking can under-report throughput. Prefer host networking for accurate results.
+    </p>
+  </div>
+
+  <div class="p-5 flex flex-col sm:flex-row gap-3 sm:items-end sm:justify-between">
+    <%= form_with url: speed_tests_path, method: :get, class: "w-full sm:max-w-sm" do %>
+      <label for="speed_tests_host_id" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+        Host
+      </label>
+      <%= select_tag :host_id,
+            options_from_collection_for_select(hosts, :id, :name, selected_host&.id),
+            id: "speed_tests_host_id",
+            class: "w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 text-sm",
+            onchange: "this.form.requestSubmit()" %>
+    <% end %>
+
+    <%= form_with url: run_speed_tests_path, method: :post, class: "w-full sm:w-auto" do %>
+      <%= hidden_field_tag :host_id, selected_host&.id %>
+      <%= button_tag type: :submit,
+            class: "w-full sm:w-auto rounded-md px-4 py-2 text-sm font-medium text-white #{running || selected_host.nil? ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500'}",
+            disabled: running || selected_host.nil? do %>
+        <span class="inline-flex items-center gap-2">
+          <% if running %>
+            <span class="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+            In Progress
+          <% else %>
+            Run Test
+          <% end %>
+        </span>
+      <% end %>
+    <% end %>
+  </div>
+</div>

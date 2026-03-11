@@ -34,7 +34,7 @@ Organize hosts into groups, visualize latency trends with smoke-style charts (mi
 
 ## Getting Started
 
-**Requirements:** Ruby 4.x, `iputils-ping` (or equivalent), `NET_RAW` capability if running in Docker.
+**Requirements:** Ruby 4.x, `iputils-ping` (or equivalent), `iperf3` (for on-demand speed tests), `NET_RAW` capability if running in Docker.
 
 ```bash
 git clone git@github.com:vdw/pingraph.git
@@ -63,6 +63,8 @@ Open [http://localhost:3000](http://localhost:3000) and sign in:
 ## How It Works
 
 `HostPollerJob` runs every minute via Solid Queue's built-in recurring scheduler. It checks each host's last probe time against its configured interval and enqueues a `PingJob` for any host that is due. `PingJob` calls `PingService`, which executes `ping -c 5 -q -W 2 <address>` and parses the summary output to extract min/avg/max RTT and packet loss percentage.
+
+On the Speed Tests page, you can run on-demand speed tests for any configured host. `PerformSpeedTestJob` calls `SpeedTestService`, which executes `iperf3 -c <address> -J -t 5` and stores receiver throughput in Mbps.
 
 ---
 
@@ -122,11 +124,30 @@ docker run -d \
   pingraph
 ```
 
+If you are running throughput tests against nearby hosts and want to avoid Docker bridge/NAT overhead, you can run with host networking (Linux only):
+
+```bash
+docker run -d \
+  --name pingraph \
+  --network host \
+  --cap-add=NET_RAW \
+  -e RAILS_MASTER_KEY="$(cat config/master.key)" \
+  -e SOLID_QUEUE_IN_PUMA=true \
+  -v pingraph_storage:/rails/storage \
+  pingraph
+```
+
+Notes for host networking:
+- `-p` port mapping is not used with `--network host`.
+- Access the app directly on the container's bound port (default Rails/Thruster HTTP port).
+- Host networking is supported on Linux; Docker Desktop (macOS/Windows) does not provide equivalent behavior.
+
 Container requirements:
 
 - `RAILS_MASTER_KEY` (production credentials)
 - `SOLID_QUEUE_IN_PUMA=true` (runs recurring scheduler + queue worker in single-container mode)
 - `NET_RAW` capability (required for ICMP ping)
+- `iperf3` binary available in the container (installed by the provided `Dockerfile`)
 - Persistent volume for `/rails/storage` (SQLite + Solid Queue/Cache/Cable databases)
 
 Compose/Kamal capability setting:
@@ -135,6 +156,9 @@ Compose/Kamal capability setting:
 # docker-compose or Kamal config
 cap_add:
   - NET_RAW
+
+# Optional for Linux performance-sensitive iperf3 runs (docker-compose/manual Docker):
+# network_mode: host
 ```
 
 ---

@@ -1,0 +1,8 @@
+<div class="w-full max-w-5xl mx-auto" id="speed_tests_content">
+  <%= render "speed_tests/main_panel", hosts: hosts, selected_host: selected_host %>
+  <%= render "speed_tests/history_table", recent_speed_tests: recent_speed_tests %>
+
+  <div class="mt-4">
+    <%= link_to "← Back to Dashboard", root_path, class: "text-sm text-indigo-600 hover:text-indigo-500 font-medium" %>
+  </div>
+</div>
