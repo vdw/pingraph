@@ -4,7 +4,7 @@ import { Chart, LineController, LineElement, PointElement, LinearScale, Category
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip, Legend)
 
 export default class extends Controller {
-  static values = { url: String }
+  static values = { url: String, window: String }
 
   async connect() {
     const data = await this.fetchData()
@@ -41,10 +41,7 @@ export default class extends Controller {
     const envBorder   = dark ? "rgba(129,140,248,0.3)" : "rgba(99,102,241,0.2)"
     const envFill     = dark ? "rgba(129,140,248,0.12)": "rgba(99,102,241,0.15)"
 
-    const labels = data.map(p => {
-      const d = new Date(p.recorded_at)
-      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-    })
+    const labels = data.map(p => this.formatLabel(p.recorded_at))
     const avg    = data.map(p => p.latency)
     const min    = data.map(p => p.min_latency)
     const max    = data.map(p => p.max_latency)
@@ -128,5 +125,15 @@ export default class extends Controller {
         }
       }
     })
+  }
+
+  formatLabel(timestamp) {
+    const value = new Date(timestamp)
+
+    if (this.windowValue === "7d") {
+      return value.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+    }
+
+    return value.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
   }
 }

@@ -5,6 +5,7 @@ Rails.application.routes.draw do
 
   resources :hosts do
     member do
+      get :ping_chart
       get :pings_data
     end
   end
