@@ -9,6 +9,13 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :speed_tests, only: [ :index ] do
+    collection do
+      get :panel
+      post :run
+    end
+  end
+
   resource :settings, only: [ :edit, :update ]
 
   resource :session

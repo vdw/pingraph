@@ -4,6 +4,7 @@ class HostsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in_as(users(:one))
     @host = hosts(:one)
+    @host.update!(address: "1.1.1.1", interval: 10)
   end
 
   test "should get index" do

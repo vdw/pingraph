@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_08_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_10_204443) do
   create_table "groups", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name"
@@ -198,6 +198,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_08_090000) do
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
+  create_table "speed_tests", force: :cascade do |t|
+    t.float "bandwidth_mbps"
+    t.datetime "created_at", null: false
+    t.integer "host_id", null: false
+    t.string "protocol", default: "tcp", null: false
+    t.datetime "recorded_at"
+    t.integer "status", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["host_id", "recorded_at"], name: "index_speed_tests_on_host_id_and_recorded_at"
+    t.index ["host_id"], name: "index_speed_tests_on_host_id"
+    t.index ["recorded_at"], name: "index_speed_tests_on_recorded_at"
+    t.index ["status"], name: "index_speed_tests_on_status"
+  end
+
   create_table "users", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email_address", null: false
@@ -215,4 +229,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_08_090000) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "speed_tests", "hosts"
 end

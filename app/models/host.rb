@@ -1,6 +1,7 @@
 class Host < ApplicationRecord
   belongs_to :group
   has_many :pings, dependent: :destroy
+  has_many :speed_tests, dependent: :destroy
 
   validates :name, presence: true
   validates :address, presence: true
@@ -16,5 +17,13 @@ class Host < ApplicationRecord
     return :down if ping.packet_loss == 100
     return :degraded if ping.packet_loss.to_i >= 5
     :up
+  end
+
+  def speed_test_in_progress?
+    speed_tests.where(status: [ SpeedTest.statuses[:queued], SpeedTest.statuses[:running] ]).exists?
+  end
+
+  def recent_speed_tests(limit = 5)
+    speed_tests.recent.limit(limit)
   end
 end

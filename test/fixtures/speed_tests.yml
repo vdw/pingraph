@@ -1,0 +1,13 @@
+one:
+  host: one
+  bandwidth_mbps: 85.5
+  protocol: tcp
+  recorded_at: 2026-03-10 19:00:00
+  status: 2
+
+two:
+  host: one
+  bandwidth_mbps:
+  protocol: tcp
+  recorded_at:
+  status: 1
