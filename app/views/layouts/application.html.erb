@@ -25,16 +25,29 @@
 
   <body class="bg-gray-50 dark:bg-gray-950 antialiased transition-colors duration-200">
     <%# Top navigation %>
-    <nav class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+    <nav class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm" data-controller="mobile-menu">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-14">
-          <div class="flex items-center gap-6">
-            <%= link_to root_path, class: "flex items-center gap-2 font-bold text-indigo-600 dark:text-indigo-400 text-lg" do %>
+        <div class="flex items-center justify-between h-14 gap-3">
+          <div class="flex items-center gap-3 sm:gap-6 min-w-0">
+            <button
+              data-action="mobile-menu#toggle"
+              data-mobile-menu-target="button"
+              class="sm:hidden rounded-md p-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label="Toggle menu"
+              aria-expanded="false"
+            >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+              </svg>
+            </button>
+
+            <%= link_to root_path, class: "flex items-center gap-2 font-bold text-indigo-600 dark:text-indigo-400 text-lg whitespace-nowrap" do %>
+              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
               </svg>
-              Pingraph
+              <span class="truncate">Pingraph</span>
             <% end %>
+
             <div class="hidden sm:flex items-center gap-4 text-sm">
               <%= link_to "Dashboard", root_path,
                     class: "text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors" %>
@@ -42,29 +55,63 @@
                     class: "text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors" %>
               <%= link_to "Groups", groups_path,
                     class: "text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors" %>
-                <%= link_to "Speed Tests", speed_tests_path,
-                  class: "text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors" %>
-                <%= link_to "Settings", edit_settings_path,
-                  class: "text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors" %>
+              <%= link_to "Speed Tests", speed_tests_path,
+                    class: "text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors" %>
             </div>
           </div>
-          <div class="flex items-center gap-3 text-sm">
-            <%# Dark mode toggle %>
+
+          <div class="flex items-center gap-2 sm:gap-3 text-sm shrink-0">
+            <% if authenticated? %>
+              <%= link_to edit_settings_path, class: "hidden sm:flex items-center gap-1 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors rounded-md p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800" do %>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <span>Settings</span>
+              <% end %>
+            <% end %>
+
             <button data-action="dark-mode#toggle"
                     class="rounded-md p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     title="Toggle dark mode" aria-label="Toggle dark mode">
-              <%# Sun — show in dark mode %>
               <svg class="hidden dark:block w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707.707M6.343 6.343l-.707.707M12 7a5 5 0 100 10A5 5 0 0012 7z"/>
               </svg>
-              <%# Moon — show in light mode %>
               <svg class="block dark:hidden w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
               </svg>
             </button>
+
             <% if authenticated? %>
               <%= button_to "Sign out", session_path, method: :delete,
-                    class: "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-medium cursor-pointer transition-colors" %>
+                    class: "hidden sm:inline-flex text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-medium cursor-pointer transition-colors" %>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="hidden sm:hidden border-t border-gray-200 dark:border-gray-700 py-3" data-mobile-menu-target="panel">
+          <div class="flex flex-col gap-1 text-sm">
+            <%= link_to "Dashboard", root_path,
+                  class: "rounded-md px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors" %>
+            <%= link_to "Hosts", hosts_path,
+                  class: "rounded-md px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors" %>
+            <%= link_to "Groups", groups_path,
+                  class: "rounded-md px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors" %>
+            <%= link_to "Speed Tests", speed_tests_path,
+                  class: "rounded-md px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors" %>
+            <% if authenticated? %>
+              <%= link_to edit_settings_path,
+                    class: "rounded-md px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors flex items-center gap-2" do %>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <span>Settings</span>
+              <% end %>
+
+              <%= button_to "Sign out", session_path, method: :delete,
+                    form_class: "w-full",
+                    class: "w-full rounded-md px-3 py-2 text-left text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-400 font-medium cursor-pointer transition-colors" %>
             <% end %>
           </div>
         </div>
