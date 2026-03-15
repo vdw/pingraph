@@ -1,2 +1,2 @@
 default:
-  ping_retention_days: 90
+  probe_result_retention_days: 90

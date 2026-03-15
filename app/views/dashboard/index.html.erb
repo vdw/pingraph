@@ -51,8 +51,8 @@
                 </thead>
                 <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
                   <% group.hosts.each do |host| %>
-                    <% ping = @latest_pings[host.id] %>
-                    <% status = host.status %>
+                    <% probe_result = @latest_probe_results[host.id] %>
+                    <% status = host.status_badge %>
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                       <td class="py-3 px-4">
                         <span class="block w-3 h-3 rounded-full mx-auto
@@ -67,12 +67,12 @@
                       </td>
                       <td class="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 font-mono"><%= host.address %></td>
                       <td class="py-3 px-4 text-sm text-gray-700 dark:text-gray-200">
-                        <% if ping&.latency %>
-                          <span class="font-semibold"><%= "%.2f" % ping.latency %></span>
+                        <% if probe_result&.latency %>
+                          <span class="font-semibold"><%= "%.2f" % probe_result.latency %></span>
                             <span class="text-gray-400 dark:text-gray-500 text-xs">ms</span>
-                          <% if ping.min_latency && ping.max_latency %>
+                          <% if probe_result.min_latency && probe_result.max_latency %>
                             <span class="text-gray-400 dark:text-gray-500 text-xs ml-1">
-                              (<%= "%.1f" % ping.min_latency %> – <%= "%.1f" % ping.max_latency %>)
+                              (<%= "%.1f" % probe_result.min_latency %> – <%= "%.1f" % probe_result.max_latency %>)
                             </span>
                           <% end %>
                         <% else %>
@@ -80,19 +80,29 @@
                         <% end %>
                       </td>
                       <td class="py-3 px-4 text-sm">
-                        <% if ping %>
-                          <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
-                            <%= ping.packet_loss == 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' :
-                                ping.packet_loss.to_i < 50 ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400' :
-                                'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' %>">
-                            <%= ping.packet_loss %>%
-                          </span>
+                        <% if probe_result %>
+                          <% if probe_result.icmp? %>
+                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
+                              <%= probe_result.packet_loss == 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' :
+                                  probe_result.packet_loss.to_i < 50 ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400' :
+                                  'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' %>">
+                              <%= probe_result.packet_loss %>%
+                            </span>
+                          <% elsif probe_result.http? %>
+                            <span class="text-xs text-gray-600 dark:text-gray-300">
+                              HTTP <%= probe_result.status_code || "ERR" %>
+                            </span>
+                          <% else %>
+                            <span class="text-xs text-gray-600 dark:text-gray-300">
+                              <%= probe_result.success? ? "Connected" : (probe_result.error_message.presence || "Connection failed") %>
+                            </span>
+                          <% end %>
                         <% else %>
                           <span class="text-gray-400 dark:text-gray-500">—</span>
                         <% end %>
                       </td>
                       <td class="py-3 px-4 text-xs text-gray-400 dark:text-gray-500">
-                        <%= ping ? time_ago_in_words(ping.recorded_at) + " ago" : "Never" %>
+                        <%= probe_result ? time_ago_in_words(probe_result.recorded_at) + " ago" : "Never" %>
                       </td>
                       <td class="py-3 px-4 text-right text-sm">
                         <%= link_to "Details →", host_path(host),

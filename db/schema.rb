@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_10_204443) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_15_134500) do
   create_table "groups", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name"
@@ -19,26 +19,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_10_204443) do
 
   create_table "hosts", force: :cascade do |t|
     t.string "address"
+    t.integer "consecutive_failures", default: 0, null: false
     t.datetime "created_at", null: false
+    t.integer "expected_status_code", default: 200, null: false
+    t.string "expected_status_code_range", default: "exact", null: false
     t.integer "group_id", null: false
     t.integer "interval", default: 60, null: false
+    t.string "last_error_message"
+    t.datetime "last_probed_at"
     t.string "name"
+    t.integer "port"
+    t.integer "probe_type", default: 0, null: false
+    t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.boolean "verify_ssl", default: true, null: false
     t.index ["group_id"], name: "index_hosts_on_group_id"
   end
 
-  create_table "pings", force: :cascade do |t|
+  create_table "probe_results", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "error_message"
     t.integer "host_id", null: false
     t.float "latency"
     t.float "max_latency"
+    t.text "metadata"
     t.float "min_latency"
     t.integer "packet_loss"
+    t.integer "probe_type", default: 0, null: false
     t.datetime "recorded_at"
+    t.integer "status_code"
+    t.boolean "success", default: true, null: false
     t.datetime "updated_at", null: false
-    t.index ["host_id", "recorded_at"], name: "index_pings_on_host_id_and_recorded_at"
-    t.index ["host_id"], name: "index_pings_on_host_id"
-    t.index ["recorded_at"], name: "index_pings_on_recorded_at"
+    t.index ["host_id", "probe_type", "recorded_at"], name: "index_probe_results_on_host_probe_type_recorded_at"
+    t.index ["host_id", "recorded_at"], name: "index_probe_results_on_host_id_and_recorded_at"
+    t.index ["host_id"], name: "index_probe_results_on_host_id"
+    t.index ["recorded_at"], name: "index_probe_results_on_recorded_at"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -52,7 +67,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_10_204443) do
 
   create_table "settings", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.integer "ping_retention_days", default: 90, null: false
+    t.integer "probe_result_retention_days", default: 90, null: false
     t.datetime "updated_at", null: false
   end
 
@@ -221,7 +236,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_10_204443) do
   end
 
   add_foreign_key "hosts", "groups"
-  add_foreign_key "pings", "hosts"
+  add_foreign_key "probe_results", "hosts"
   add_foreign_key "sessions", "users"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

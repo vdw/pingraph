@@ -10,7 +10,7 @@ export default class extends Controller {
     const data = await this.fetchData()
     if (data.length === 0) {
       this.element.closest("[data-chart-container]").innerHTML =
-        '<p class="text-gray-400 text-sm text-center py-8">No ping data yet. Probes will begin shortly.</p>'
+        '<p class="text-gray-400 text-sm text-center py-8">No probe data yet. Probes will begin shortly.</p>'
       return
     }
     this.renderChart(data)

@@ -15,6 +15,6 @@ class SettingsController < ApplicationController
 
   private
     def setting_params
-      params.expect(setting: [ :ping_retention_days ])
+      params.expect(setting: [ :probe_result_retention_days ])
     end
 end

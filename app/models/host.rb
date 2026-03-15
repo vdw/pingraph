@@ -1,22 +1,69 @@
 class Host < ApplicationRecord
   belongs_to :group
-  has_many :pings, dependent: :destroy
+  has_many :probe_results, dependent: :destroy
   has_many :speed_tests, dependent: :destroy
+
+  enum :probe_type, {
+    icmp: 0,
+    http: 1,
+    tcp: 2
+  }, default: :icmp
+
+  enum :status, {
+    unknown: 0,
+    up: 1,
+    degraded: 2,
+    down: 3
+  }, default: :unknown
 
   validates :name, presence: true
   validates :address, presence: true
   validates :interval, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 10 }
+  validates :port, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 65_535 }, if: :tcp?
+  validates :expected_status_code, numericality: { only_integer: true, greater_than_or_equal_to: 100, less_than_or_equal_to: 599 }, if: :http?
+  validates :expected_status_code_range, inclusion: { in: %w[exact 2xx 3xx 4xx 5xx] }, if: :http?
+  validates :verify_ssl, inclusion: { in: [ true, false ] }, if: :http?
 
-  def latest_ping
-    pings.order(recorded_at: :desc).first
+  validate :address_must_be_valid_http_url, if: :http?
+
+  before_validation :normalize_probe_specific_fields
+
+  def latest_probe_result
+    probe_results.order(recorded_at: :desc).first
   end
 
-  def status
-    ping = latest_ping
+  def status_badge
+    return status.to_sym if status.present? && status != "unknown"
+
+    ping = latest_probe_result
     return :unknown if ping.nil?
-    return :down if ping.packet_loss == 100
-    return :degraded if ping.packet_loss.to_i >= 5
+    return :down unless ping.success?
+    return :degraded if ping.icmp? && ping.packet_loss.to_i >= 5
+
     :up
+  end
+
+  def http_status_matches?(status_code)
+    status_code = status_code.to_i
+    case expected_status_code_range
+    when "2xx"
+      status_code.between?(200, 299)
+    when "3xx"
+      status_code.between?(300, 399)
+    when "4xx"
+      status_code.between?(400, 499)
+    when "5xx"
+      status_code.between?(500, 599)
+    else
+      status_code == expected_status_code
+    end
+  end
+
+  def normalized_http_address
+    value = address.to_s.strip
+    return value if value.start_with?("http://", "https://")
+
+    "https://#{value}"
   end
 
   def speed_test_in_progress?
@@ -25,5 +72,32 @@ class Host < ApplicationRecord
 
   def recent_speed_tests(limit = 5)
     speed_tests.recent.limit(limit)
+  end
+
+  private
+
+  def address_must_be_valid_http_url
+    uri = URI.parse(normalized_http_address)
+    if uri.host.blank? || !%w[http https].include?(uri.scheme)
+      errors.add(:address, "must be a valid HTTP/HTTPS URL")
+    end
+  rescue URI::InvalidURIError
+    errors.add(:address, "must be a valid HTTP/HTTPS URL")
+  end
+
+  def normalize_probe_specific_fields
+    if tcp?
+      self.expected_status_code_range = "exact" if expected_status_code_range.blank?
+      self.verify_ssl = true if verify_ssl.nil?
+      return
+    end
+
+    self.port = nil
+
+    return unless http?
+
+    self.expected_status_code = 200 if expected_status_code.blank?
+    self.expected_status_code_range = "exact" if expected_status_code_range.blank?
+    self.verify_ssl = true if verify_ssl.nil?
   end
 end

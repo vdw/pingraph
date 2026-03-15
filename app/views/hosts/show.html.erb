@@ -5,7 +5,7 @@
   <div class="flex items-start justify-between mb-6">
     <div>
       <div class="flex items-center gap-3 mb-1">
-        <% status = @host.status %>
+        <% status = @host.status_badge %>
         <span class="w-3 h-3 rounded-full flex-shrink-0
           <%= status == :up ? 'bg-green-400' :
               status == :degraded ? 'bg-yellow-400' :
@@ -25,54 +25,68 @@
             class: "rounded-md px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 font-medium text-gray-700 dark:text-gray-200" %>
       <%= button_to "Delete", @host, method: :delete,
             class: "rounded-md px-3 py-2 text-sm bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-700 dark:text-red-400 font-medium cursor-pointer",
-            data: { turbo_confirm: "Delete #{@host.name}? This will remove all ping history." } %>
+        data: { turbo_confirm: "Delete #{@host.name}? This will remove all probe history." } %>
     </div>
   </div>
 
-  <%# Smoke chart %>
-  <%= turbo_frame_tag "host_ping_chart" do %>
-    <%= render "ping_chart_panel", host: @host, chart_window: @chart_window, chart_resolution: @chart_resolution %>
+  <%# Probe chart %>
+  <%= turbo_frame_tag "host_probe_chart" do %>
+    <%= render "probe_chart_panel", host: @host, chart_window: @chart_window, chart_resolution: @chart_resolution %>
   <% end %>
 
-  <%# Recent pings table %>
+  <%# Recent probe results table %>
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
     <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
       <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300">Recent probes</h2>
       <span class="text-xs text-gray-400 dark:text-gray-500">Last 20 results</span>
     </div>
-    <% if @recent_pings.any? %>
+    <% if @recent_probe_results.any? %>
       <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
         <thead class="bg-gray-50 dark:bg-gray-700/50">
           <tr>
             <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time</th>
+            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
             <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg RTT</th>
             <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Min</th>
             <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Max</th>
-            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Packet Loss</th>
+            <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Outcome</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
-          <% @recent_pings.each do |ping| %>
+          <% @recent_probe_results.each do |probe_result| %>
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
               <td class="py-2.5 px-4 text-sm text-gray-500 dark:text-gray-400 font-mono">
-                <%= ping.recorded_at.strftime("%Y-%m-%d %H:%M:%S") %>
+                <%= probe_result.recorded_at.strftime("%Y-%m-%d %H:%M:%S") %>
+              </td>
+              <td class="py-2.5 px-4 text-sm text-gray-500 dark:text-gray-400 uppercase">
+                <%= probe_result.probe_type %>
               </td>
               <td class="py-2.5 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                <%= ping.latency ? ("%.2f ms" % ping.latency) : "—" %>
+                <%= probe_result.latency ? ("%.2f ms" % probe_result.latency) : "—" %>
               </td>
               <td class="py-2.5 px-4 text-sm text-gray-500 dark:text-gray-400">
-                <%= ping.min_latency ? ("%.2f ms" % ping.min_latency) : "—" %>
+                <%= probe_result.min_latency ? ("%.2f ms" % probe_result.min_latency) : "—" %>
               </td>
               <td class="py-2.5 px-4 text-sm text-gray-500 dark:text-gray-400">
-                <%= ping.max_latency ? ("%.2f ms" % ping.max_latency) : "—" %>
+                <%= probe_result.max_latency ? ("%.2f ms" % probe_result.max_latency) : "—" %>
               </td>
               <td class="py-2.5 px-4">
-                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
-                  <%= ping.packet_loss == 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' :
-                      ping.packet_loss.to_i < 50 ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400' :
-                      'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' %>">
-                  <%= ping.packet_loss %>%
-                </span>
+                <% if probe_result.icmp? %>
+                  <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
+                    <%= probe_result.packet_loss == 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' :
+                        probe_result.packet_loss.to_i < 50 ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400' :
+                        'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' %>">
+                    <%= probe_result.packet_loss %>%
+                  </span>
+                <% elsif probe_result.http? %>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">
+                    <%= probe_result.success? ? "HTTP #{probe_result.status_code}" : (probe_result.error_message.presence || "HTTP failed") %>
+                  </span>
+                <% else %>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">
+                    <%= probe_result.success? ? "Connected" : (probe_result.error_message.presence || "Connection failed") %>
+                  </span>
+                <% end %>
               </td>
             </tr>
           <% end %>

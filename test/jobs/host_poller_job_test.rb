@@ -4,7 +4,7 @@ class HostPollerJobTest < ActiveJob::TestCase
   test "enqueues due host with bounded jitter" do
     host = hosts(:one)
     host.update!(interval: 10)
-    host.pings.delete_all
+    host.probe_results.delete_all
 
     clear_enqueued_jobs
 
@@ -14,7 +14,7 @@ class HostPollerJobTest < ActiveJob::TestCase
       HostPollerJob.perform_now
 
       matching_jobs = enqueued_jobs.select do |job|
-        job[:job] == PingJob && job[:args] == [ host.id ]
+        job[:job] == ProbeJob && job[:args] == [ host.id ]
       end
 
       assert_equal 1, matching_jobs.size

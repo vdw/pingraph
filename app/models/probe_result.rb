@@ -1,8 +1,14 @@
-class Ping < ApplicationRecord
+class ProbeResult < ApplicationRecord
   belongs_to :host
 
-  validates :packet_loss, presence: true
+  enum :probe_type, {
+    icmp: 0,
+    http: 1,
+    tcp: 2
+  }, default: :icmp
+
   validates :recorded_at, presence: true
+  validates :packet_loss, presence: true, if: :icmp?
 
   scope :downsampled_for_range, ->(start_time, interval_minutes) do
     interval_seconds = interval_minutes.to_i * 60

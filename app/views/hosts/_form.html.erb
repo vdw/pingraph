@@ -1,4 +1,4 @@
-<%= form_with(model: host) do |form| %>
+<%= form_with(model: host, data: { controller: "probe-type-fields" }) do |form| %>
   <% if host.errors.any? %>
     <div class="mb-5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3">
       <p class="text-sm font-semibold text-red-700 dark:text-red-400 mb-1">
@@ -29,6 +29,66 @@
             class: ["block w-full rounded-lg border px-3 py-2 text-sm font-mono shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500",
                     "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
                     host.errors[:address].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
+    </div>
+
+    <div>
+      <%= form.label :probe_type, "Probe Type", class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
+      <%= form.select :probe_type,
+            Host.probe_types.keys.map { |value| [value.upcase, value] },
+            {},
+            class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white",
+                    "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
+                    host.errors[:probe_type].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"],
+            data: {
+              action: "change->probe-type-fields#update",
+              probe_type_fields_target: "probeType"
+            } %>
+    </div>
+
+    <div data-probe-type-fields-target="tcpFields" class="space-y-3 hidden">
+      <div>
+        <%= form.label :port, class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
+        <%= form.number_field :port,
+              min: 1,
+              max: 65_535,
+              placeholder: "e.g. 443",
+              class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white",
+                      "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
+                      host.errors[:port].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
+      </div>
+    </div>
+
+    <div data-probe-type-fields-target="httpFields" class="space-y-3 hidden">
+      <div>
+        <%= form.label :expected_status_code_range, "Expected Status", class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
+        <%= form.select :expected_status_code_range,
+              [["Exact", "exact"], ["2xx", "2xx"], ["3xx", "3xx"], ["4xx", "4xx"], ["5xx", "5xx"]],
+              {},
+              class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white",
+                      "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
+                      host.errors[:expected_status_code_range].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"],
+              data: {
+                action: "change->probe-type-fields#toggleExpectedCode",
+                probe_type_fields_target: "statusRange"
+              } %>
+      </div>
+
+      <div data-probe-type-fields-target="expectedCodeField" class="hidden">
+        <%= form.label :expected_status_code, class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
+        <%= form.number_field :expected_status_code,
+              min: 100,
+              max: 599,
+              class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white",
+                      "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
+                      host.errors[:expected_status_code].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
+      </div>
+
+      <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+        <%= form.check_box :verify_ssl,
+              class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" %>
+        Verify SSL certificate
+      </label>
+      <p class="text-xs text-gray-400 dark:text-gray-500">Disable only for self-signed/internal certificates.</p>
     </div>
 
     <div>

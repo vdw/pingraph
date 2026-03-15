@@ -6,12 +6,12 @@ class HostPollerJob < ApplicationJob
     now = Time.current
 
     Host.find_each do |host|
-      last_ping_at = host.pings.maximum(:recorded_at)
+      last_ping_at = host.probe_results.maximum(:recorded_at)
 
       # Enqueue if never pinged OR if the interval has elapsed since the last ping
       if last_ping_at.nil? || last_ping_at < now - host.interval.seconds
         jitter_seconds = rand(0.0..JITTER_MAX_SECONDS)
-        PingJob.set(wait: jitter_seconds.seconds).perform_later(host.id)
+        ProbeJob.set(wait: jitter_seconds.seconds).perform_later(host.id)
       end
     end
   end

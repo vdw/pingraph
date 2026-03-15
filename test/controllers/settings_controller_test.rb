@@ -10,20 +10,20 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     get edit_settings_url
 
     assert_response :success
-    assert_equal 90, Setting.current.ping_retention_days
+    assert_equal 90, Setting.current.probe_result_retention_days
   end
 
   test "should update setting" do
-    patch settings_url, params: { setting: { ping_retention_days: 60 } }
+    patch settings_url, params: { setting: { probe_result_retention_days: 60 } }
 
     assert_redirected_to edit_settings_url
-    assert_equal 60, Setting.current.ping_retention_days
+    assert_equal 60, Setting.current.probe_result_retention_days
   end
 
   test "should reject invalid retention days" do
-    patch settings_url, params: { setting: { ping_retention_days: 45 } }
+    patch settings_url, params: { setting: { probe_result_retention_days: 45 } }
 
     assert_response :unprocessable_entity
-    assert_equal 90, Setting.current.ping_retention_days
+    assert_equal 90, Setting.current.probe_result_retention_days
   end
 end

@@ -2,6 +2,8 @@
 
 one:
   host: one
+  probe_type: icmp
+  success: true
   latency: 1.5
   min_latency: 1.5
   max_latency: 1.5
@@ -10,6 +12,8 @@ one:
 
 two:
   host: two
+  probe_type: icmp
+  success: true
   latency: 1.5
   min_latency: 1.5
   max_latency: 1.5

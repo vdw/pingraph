@@ -1,16 +1,16 @@
 require "test_helper"
 
-class PingTest < ActiveSupport::TestCase
+class ProbeResultTest < ActiveSupport::TestCase
   test "downsampled_for_range aggregates by bucket in ascending order" do
     host = hosts(:one)
-    host.pings.delete_all
+    host.probe_results.delete_all
 
     travel_to Time.zone.parse("2026-03-11 12:00:00 UTC") do
-      host.pings.create!(recorded_at: Time.zone.parse("2026-03-11 11:01:00 UTC"), latency: 10.0, min_latency: 8.0, max_latency: 15.0, packet_loss: 0)
-      host.pings.create!(recorded_at: Time.zone.parse("2026-03-11 11:04:00 UTC"), latency: 30.0, min_latency: 6.0, max_latency: 40.0, packet_loss: 20)
-      host.pings.create!(recorded_at: Time.zone.parse("2026-03-11 11:11:00 UTC"), latency: 25.0, min_latency: 20.0, max_latency: 30.0, packet_loss: 5)
+      host.probe_results.create!(probe_type: :icmp, success: true, recorded_at: Time.zone.parse("2026-03-11 11:01:00 UTC"), latency: 10.0, min_latency: 8.0, max_latency: 15.0, packet_loss: 0)
+      host.probe_results.create!(probe_type: :icmp, success: true, recorded_at: Time.zone.parse("2026-03-11 11:04:00 UTC"), latency: 30.0, min_latency: 6.0, max_latency: 40.0, packet_loss: 20)
+      host.probe_results.create!(probe_type: :icmp, success: true, recorded_at: Time.zone.parse("2026-03-11 11:11:00 UTC"), latency: 25.0, min_latency: 20.0, max_latency: 30.0, packet_loss: 5)
 
-      rows = host.pings.downsampled_for_range(Time.current - 1.hour, 10).to_a
+      rows = host.probe_results.downsampled_for_range(Time.current - 1.hour, 10).to_a
 
       assert_equal 2, rows.size
       assert_operator rows.first.bucket_epoch.to_i, :<, rows.last.bucket_epoch.to_i
@@ -31,12 +31,12 @@ class PingTest < ActiveSupport::TestCase
 
   test "downsampled_for_range keeps null rtt values while tracking packet loss" do
     host = hosts(:one)
-    host.pings.delete_all
+    host.probe_results.delete_all
 
     travel_to Time.zone.parse("2026-03-11 12:00:00 UTC") do
-      host.pings.create!(recorded_at: Time.current - 5.minutes, latency: nil, min_latency: nil, max_latency: nil, packet_loss: 100)
+      host.probe_results.create!(probe_type: :icmp, success: false, recorded_at: Time.current - 5.minutes, latency: nil, min_latency: nil, max_latency: nil, packet_loss: 100)
 
-      row = host.pings.downsampled_for_range(Time.current - 1.hour, 5).first
+      row = host.probe_results.downsampled_for_range(Time.current - 1.hour, 5).first
 
       assert_nil row.latency
       assert_nil row.min_latency
