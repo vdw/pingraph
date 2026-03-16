@@ -10,11 +10,15 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_15_134500) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_15_213000) do
   create_table "groups", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.text "description"
+    t.boolean "is_public", default: false, null: false
     t.string "name"
+    t.string "status_slug"
     t.datetime "updated_at", null: false
+    t.index ["status_slug"], name: "index_groups_on_status_slug", unique: true
   end
 
   create_table "hosts", force: :cascade do |t|
@@ -27,6 +31,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_15_134500) do
     t.integer "interval", default: 60, null: false
     t.string "last_error_message"
     t.datetime "last_probed_at"
+    t.float "latency_threshold_ms", default: 350.0, null: false
     t.string "name"
     t.integer "port"
     t.integer "probe_type", default: 0, null: false

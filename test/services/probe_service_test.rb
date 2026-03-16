@@ -82,6 +82,39 @@ class ProbeServiceTest < ActiveSupport::TestCase
     Net::HTTP.singleton_class.define_method(:new, original_new)
   end
 
+  test "execute stores degraded host status for successful high latency http probe" do
+    host = hosts(:one)
+    host.update_columns(
+      probe_type: Host.probe_types.fetch("http"),
+      address: "https://service.local",
+      expected_status_code: 200,
+      expected_status_code_range: "exact",
+      verify_ssl: true,
+      latency_threshold_ms: 200.0,
+      status: Host.statuses.fetch("unknown"),
+      consecutive_failures: 0,
+      updated_at: Time.current
+    )
+
+    result = ProbeService::Result.new(
+      probe_type: :http,
+      success: true,
+      latency: 245.0,
+      status_code: 200,
+      metadata: {},
+      recorded_at: Time.current
+    )
+
+    assert_difference("host.probe_results.count", +1) do
+      ProbeService.send(:persist_result!, host, result)
+    end
+
+    host.reload
+    assert_equal "degraded", host.status
+    assert_equal 0, host.consecutive_failures
+    assert_nil host.last_error_message
+  end
+
   class FakeHttp
     attr_accessor :open_timeout, :read_timeout, :use_ssl, :verify_mode
 

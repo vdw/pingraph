@@ -178,7 +178,7 @@ class ProbeService
 
       failures = result.success ? 0 : host.consecutive_failures + 1
       computed_status = if result.success
-        if result.probe_type.to_sym == :icmp && result.packet_loss.to_i >= 5
+        if host.result_degraded?(result)
           :degraded
         else
           :up
