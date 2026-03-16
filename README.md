@@ -36,6 +36,13 @@ Organize hosts into groups, visualize latency trends with smoke-style charts (mi
 
 **Requirements:** Ruby 4.x, `iputils-ping` (or equivalent), `iperf3` (for on-demand speed tests), `NET_RAW` capability if running in Docker.
 
+**Environment variables**
+
+| Variable | Default | Description |
+|---|---|---|
+| `RAILS_MASTER_KEY` | — | Required. Contents of `config/master.key`. |
+| `TIME_ZONE` | `UTC` | Timezone for all displayed timestamps. Use any [Rails timezone name](https://api.rubyonrails.org/classes/ActiveSupport/TimeZone.html), e.g. `Athens`, `Eastern Time (US & Canada)`, `Tokyo`. Run `bin/rails time:zones:all` to list all valid values. |
+
 ```bash
 git clone git@github.com:vdw/pingraph.git
 cd pingraph

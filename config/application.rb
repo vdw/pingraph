@@ -21,7 +21,9 @@ module Pingraph
     # These settings can be overridden in specific environments using the files
     # in config/environments, which are processed later.
     #
-    # config.time_zone = "Central Time (US & Canada)"
+    # Set TIME_ZONE to any Rails-recognized timezone string, e.g. "Athens", "Eastern Time (US & Canada)", "UTC".
+    # Run `bin/rails time:zones:all` to see all valid values.
+    config.time_zone = ENV.fetch("TIME_ZONE", "UTC")
     # config.eager_load_paths << Rails.root.join("extras")
   end
 end
