@@ -1,0 +1,28 @@
+<div class="rounded-2xl border border-slate-200 bg-white/80 shadow-xl shadow-slate-200/70 backdrop-blur-sm overflow-hidden dark:border-white/10 dark:bg-white/5 dark:shadow-black/20">
+  <% if incidents.any? %>
+    <ul class="divide-y divide-slate-200 dark:divide-white/10">
+      <% incidents.each do |incident| %>
+        <li class="grid gap-3 px-5 py-4 text-sm md:grid-cols-[220px_180px_minmax(0,1fr)] md:items-start">
+          <div class="text-slate-600 dark:text-slate-300">
+            <p><%= incident.start_at.strftime("%b %-d, %Y, %-I:%M %p") %></p>
+            <p class="mt-1 text-slate-500 dark:text-slate-500">
+              <%= incident.ongoing? ? "Ongoing" : "Ended #{incident.end_at.strftime('%-I:%M %p')}" %>
+            </p>
+          </div>
+          <div>
+            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase <%= incident.state == :down ? 'bg-red-500/15 text-red-700 dark:text-red-200' : 'bg-amber-500/15 text-amber-700 dark:text-amber-100' %>">
+              <%= incident.state == :down ? 'Outage' : 'Degraded' %>
+            </span>
+            <p class="mt-2 text-slate-500 dark:text-slate-400"><%= distance_of_time_in_words(incident.start_at, incident.end_at || Time.current) %></p>
+          </div>
+          <div class="text-slate-700 dark:text-slate-200">
+            <p><span class="font-semibold text-slate-900 dark:text-white"><%= incident.host.name %></span> in <%= incident.group.name %></p>
+            <p class="mt-1 text-slate-500 dark:text-slate-400"><%= incident.message %></p>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="px-5 py-8 text-center text-sm text-slate-500 dark:text-slate-400">No incidents in the last 7 days.</p>
+  <% end %>
+</div>

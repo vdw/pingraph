@@ -1,6 +1,9 @@
 Rails.application.routes.draw do
   root "dashboard#index"
 
+  get "/status", to: "public/status#index", as: :public_status
+  get "/status/:slug", to: "public/status#show", as: :public_status_group
+
   resources :groups
 
   resources :hosts do

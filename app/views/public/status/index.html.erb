@@ -1,0 +1,57 @@
+<% content_for :title, @group.present? ? "#{@group.name} Status" : "Pingraph Status" %>
+
+<%= render "global_header", overall_state: @overall_state, generated_at: @generated_at, group: @group %>
+
+<section class="mb-8">
+  <div class="mb-3 flex items-center justify-between gap-4">
+    <h2 class="text-2xl font-semibold text-slate-900 dark:text-white">Global 24-Hour Uptime Bar</h2>
+    <div class="flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+      <span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-sm bg-emerald-400"></span>Operational</span>
+      <span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-sm bg-amber-400"></span>Degraded</span>
+      <span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-sm bg-red-500"></span>Outage</span>
+      <span class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-sm bg-slate-300 dark:bg-slate-600"></span>No data</span>
+    </div>
+  </div>
+
+  <div class="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-xl shadow-slate-200/70 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 dark:shadow-black/20">
+    <%= render "uptime_bar", blocks: @global_blocks, large: true %>
+  </div>
+</section>
+
+<section class="mb-8 space-y-6">
+  <div class="mb-3 flex items-center justify-between gap-4">
+    <h2 class="text-2xl font-semibold text-slate-900 dark:text-white">Services Status</h2>
+    <% if @group.nil? %>
+      <span class="text-sm text-slate-500 dark:text-slate-400">Public groups only</span>
+    <% end %>
+  </div>
+
+  <% @group_rows.each do |entry| %>
+    <div class="rounded-2xl border border-slate-200 bg-white/80 shadow-xl shadow-slate-200/70 backdrop-blur-sm overflow-hidden dark:border-white/10 dark:bg-white/5 dark:shadow-black/20">
+      <div class="border-b border-slate-200 px-5 py-4 dark:border-white/10">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white"><%= entry[:group].name %></h3>
+            <% if entry[:group].description.present? %>
+              <p class="mt-1 text-sm text-slate-500 dark:text-slate-400"><%= entry[:group].description %></p>
+            <% end %>
+          </div>
+          <% if entry[:group].status_slug.present? && @group.nil? %>
+            <%= link_to "Open page", public_status_group_path(entry[:group].status_slug), class: "text-sm font-medium text-cyan-700 hover:text-cyan-600 dark:text-cyan-300 dark:hover:text-cyan-200" %>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="divide-y divide-slate-200 dark:divide-white/10">
+        <% entry[:host_rows].each do |host_row| %>
+          <%= render "host_row", host_row: host_row %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</section>
+
+<section>
+  <h2 class="mb-3 text-2xl font-semibold text-slate-900 dark:text-white">Recent Incidents</h2>
+  <%= render "incidents", incidents: @incidents %>
+</section>

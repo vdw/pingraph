@@ -1,0 +1,14 @@
+<div class="flex items-stretch gap-1">
+  <% blocks.each do |block| %>
+    <% color_class = case block[:state]
+       when :down then "bg-red-500"
+       when :degraded then "bg-amber-400"
+       when :operational then "bg-emerald-400"
+       else "bg-slate-300 dark:bg-slate-600"
+       end %>
+    <div
+      class="<%= [large ? 'h-14' : 'h-6', 'min-w-0 flex-1 rounded-md', color_class].join(' ') %>"
+      title="<%= "#{block[:start_at].strftime('%H:%M')} - #{block[:end_at].strftime('%H:%M')}: #{block[:state].to_s.humanize}" %>">
+    </div>
+  <% end %>
+</div>

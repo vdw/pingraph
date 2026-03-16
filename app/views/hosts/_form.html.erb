@@ -113,6 +113,21 @@
       </div>
       <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Minimum 10 seconds</p>
     </div>
+
+    <div>
+      <%= form.label :latency_threshold_ms, "Latency threshold", class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
+      <div class="relative">
+        <%= form.number_field :latency_threshold_ms,
+              min: 1,
+              step: 0.1,
+              placeholder: "350",
+              class: ["block w-full rounded-lg border px-3 py-2 pr-12 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white",
+                      "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
+                      host.errors[:latency_threshold_ms].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
+        <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-400 dark:text-gray-500">ms</span>
+      </div>
+      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Used by the dashboard and public status page to mark latency-based degradation.</p>
+    </div>
   </div>
 
   <div class="mt-6 flex items-center gap-3">

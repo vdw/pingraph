@@ -1,4 +1,6 @@
 class Host < ApplicationRecord
+  DEFAULT_LATENCY_THRESHOLD_MS = 350.0
+
   belongs_to :group
   has_many :probe_results, dependent: :destroy
   has_many :speed_tests, dependent: :destroy
@@ -19,6 +21,7 @@ class Host < ApplicationRecord
   validates :name, presence: true
   validates :address, presence: true
   validates :interval, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 10 }
+  validates :latency_threshold_ms, numericality: { greater_than: 0 }
   validates :port, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 65_535 }, if: :tcp?
   validates :expected_status_code, numericality: { only_integer: true, greater_than_or_equal_to: 100, less_than_or_equal_to: 599 }, if: :http?
   validates :expected_status_code_range, inclusion: { in: %w[exact 2xx 3xx 4xx 5xx] }, if: :http?
@@ -33,14 +36,24 @@ class Host < ApplicationRecord
   end
 
   def status_badge
-    return status.to_sym if status.present? && status != "unknown"
-
-    ping = latest_probe_result
-    return :unknown if ping.nil?
-    return :down unless ping.success?
-    return :degraded if ping.icmp? && ping.packet_loss.to_i >= 5
+    result = latest_probe_result
+    return :unknown if result.nil?
+    return :down if status == "down"
+    return :degraded if result_degraded?(result)
+    return :degraded unless result.success?
 
     :up
+  end
+
+  def result_degraded?(result)
+    return false if result.nil?
+    success = result.respond_to?(:success?) ? result.success? : result.success
+    icmp_result = result.respond_to?(:icmp?) ? result.icmp? : result.probe_type.to_s == "icmp"
+
+    return true unless success
+    return true if icmp_result && result.packet_loss.to_i >= 5
+
+    result.latency.present? && result.latency.to_f > latency_threshold_ms.to_f
   end
 
   def http_status_matches?(status_code)
@@ -74,6 +87,14 @@ class Host < ApplicationRecord
     speed_tests.recent.limit(limit)
   end
 
+  def publicly_visible?
+    group.is_public?
+  end
+
+  def public_label
+    "#{name} (#{probe_type.upcase})"
+  end
+
   private
 
   def address_must_be_valid_http_url
@@ -86,6 +107,8 @@ class Host < ApplicationRecord
   end
 
   def normalize_probe_specific_fields
+    self.latency_threshold_ms = DEFAULT_LATENCY_THRESHOLD_MS if latency_threshold_ms.blank?
+
     if tcp?
       self.expected_status_code_range = "exact" if expected_status_code_range.blank?
       self.verify_ssl = true if verify_ssl.nil?

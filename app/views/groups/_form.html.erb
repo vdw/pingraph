@@ -22,6 +22,38 @@
                     group.errors[:name].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
       <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Must be unique. Used to organise hosts on the dashboard.</p>
     </div>
+
+    <div>
+      <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+        <%= form.check_box :is_public,
+              class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" %>
+        Public status page
+      </label>
+      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">If enabled, this group's hosts appear on the unauthenticated public status page.</p>
+    </div>
+
+    <div>
+      <%= form.label :status_slug, "Public slug", class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
+      <div class="relative">
+        <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-xs text-gray-400 dark:text-gray-500">/status/</span>
+        <%= form.text_field :status_slug,
+              placeholder: "internal-infra",
+              class: ["block w-full rounded-lg border pl-20 pr-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500",
+                      "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
+                      group.errors[:status_slug].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
+      </div>
+      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Lowercase letters, numbers, and hyphens only. Auto-generated if left blank.</p>
+    </div>
+
+    <div>
+      <%= form.label :description, class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
+      <%= form.text_area :description,
+            rows: 3,
+            placeholder: "Optional public summary for this status page.",
+            class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500",
+                    "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
+                    group.errors[:description].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
+    </div>
   </div>
 
   <div class="mt-6">

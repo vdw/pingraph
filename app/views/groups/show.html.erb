@@ -16,6 +16,24 @@
   </div>
 
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-4">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+      <div class="flex flex-wrap items-center gap-2 text-sm">
+        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <%= @group.is_public? ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' %>">
+          <%= @group.is_public? ? 'Public' : 'Private' %>
+        </span>
+        <% if @group.is_public? %>
+          <span class="text-gray-500 dark:text-gray-400 font-mono">/status/<%= @group.status_slug %></span>
+          <%= link_to "Open status page", @group.public_status_path,
+                class: "text-indigo-600 hover:text-indigo-500 font-medium",
+                target: "_blank",
+                rel: "noreferrer" %>
+        <% end %>
+      </div>
+      <% if @group.description.present? %>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400"><%= @group.description %></p>
+      <% end %>
+    </div>
+
     <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
       <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300">Hosts</h2>
       <%= link_to "+ Add Host", new_host_path(host: { group_id: @group.id }),
