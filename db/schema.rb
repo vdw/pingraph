@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_04_101041) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_04_130000) do
   create_table "groups", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -38,6 +38,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_101041) do
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
     t.boolean "verify_ssl", default: true, null: false
+    t.index ["group_id", "address", "probe_type", "port"], name: "index_hosts_unique_tcp", unique: true, where: "probe_type = 2"
+    t.index ["group_id", "address", "probe_type"], name: "index_hosts_unique_non_tcp", unique: true, where: "probe_type IN (0, 1)"
     t.index ["group_id", "name"], name: "index_hosts_on_group_id_and_name"
     t.index ["group_id", "status"], name: "index_hosts_on_group_id_and_status"
     t.index ["group_id"], name: "index_hosts_on_group_id"

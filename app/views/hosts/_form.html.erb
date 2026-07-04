@@ -33,16 +33,26 @@
 
     <div>
       <%= form.label :probe_type, "Probe Type", class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
-      <%= form.select :probe_type,
-            Host.probe_types.keys.map { |value| [value.upcase, value] },
-            {},
-            class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white",
-                    "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
-                    host.errors[:probe_type].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"],
-            data: {
-              action: "change->probe-type-fields#update",
-              probe_type_fields_target: "probeType"
-            } %>
+      <% if host.persisted? %>
+        <%= form.hidden_field :probe_type %>
+        <div class="block w-full rounded-lg border border-gray-200 dark:border-gray-600 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300"
+             data-probe-type-fields-target="probeType"
+             data-probe-type="<%= host.probe_type %>">
+          <%= host.probe_type.upcase %>
+          <span class="ml-2 text-xs text-gray-400 dark:text-gray-500">(cannot be changed — would corrupt historical data)</span>
+        </div>
+      <% else %>
+        <%= form.select :probe_type,
+              Host.probe_types.keys.map { |value| [value.upcase, value] },
+              {},
+              class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white",
+                      "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
+                      host.errors[:probe_type].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"],
+              data: {
+                action: "change->probe-type-fields#update",
+                probe_type_fields_target: "probeType"
+              } %>
+      <% end %>
     </div>
 
     <div data-probe-type-fields-target="tcpFields" class="space-y-3 hidden">

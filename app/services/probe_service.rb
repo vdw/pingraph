@@ -176,17 +176,14 @@ class ProbeService
         recorded_at: result.recorded_at
       )
 
-      failures = result.success ? 0 : host.consecutive_failures + 1
-      computed_status = if result.success
-        if host.result_degraded?(result)
-          :degraded
-        else
-          :up
-        end
-      elsif failures < FAILURE_THRESHOLD
-        :degraded
+      if result.success
+        failures = 0
+        computed_status = host.result_degraded?(result) ? :degraded : :up
       else
-        :down
+        # Atomic SQL increment avoids race condition when concurrent ProbeJobs run
+        Host.where(id: host.id).update_all("consecutive_failures = consecutive_failures + 1")
+        failures = Host.where(id: host.id).pick(:consecutive_failures)
+        computed_status = failures >= FAILURE_THRESHOLD ? :down : :degraded
       end
 
       host.update_columns(

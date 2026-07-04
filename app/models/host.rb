@@ -20,6 +20,7 @@ class Host < ApplicationRecord
 
   validates :name, presence: true
   validates :address, presence: true
+  validate :address_unique_within_group
   validates :interval, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 10 }
   validates :latency_threshold_ms, numericality: { greater_than: 0 }
   validates :port, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 65_535 }, if: :tcp?
@@ -28,6 +29,7 @@ class Host < ApplicationRecord
   validates :verify_ssl, inclusion: { in: [ true, false ] }, if: :http?
 
   validate :address_must_be_valid_http_url, if: :http?
+  validate :probe_type_immutable, on: :update
 
   before_validation :normalize_probe_specific_fields
 
@@ -96,6 +98,24 @@ class Host < ApplicationRecord
   end
 
   private
+
+  def address_unique_within_group
+    return if address.blank? || group_id.blank?
+
+    scope = Host.where(group_id: group_id, address: address, probe_type: probe_type)
+    scope = scope.where(port: port) if tcp?
+    scope = scope.where.not(id: id) if persisted?
+
+    return unless scope.exists?
+
+    msg = tcp? ? "is already monitored on port #{port} in this group" \
+                : "is already monitored in this group with the same probe type"
+    errors.add(:address, msg)
+  end
+
+  def probe_type_immutable
+    errors.add(:probe_type, "cannot be changed after the host is created") if probe_type_changed?
+  end
 
   def address_must_be_valid_http_url
     uri = URI.parse(normalized_http_address)
