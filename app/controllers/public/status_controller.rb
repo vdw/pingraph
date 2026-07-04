@@ -25,7 +25,7 @@ module Public
       @generated_at = Time.current
       host_ids = @groups.flat_map { |g| g.hosts.map(&:id) }
       latest_probe_results = fetch_latest_probe_results(host_ids)
-      
+
       @group_rows = @groups.map do |group|
         {
           group: group,
