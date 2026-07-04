@@ -23,10 +23,13 @@ module Public
 
     def build_status_page!
       @generated_at = Time.current
+      host_ids = @groups.flat_map { |g| g.hosts.map(&:id) }
+      latest_probe_results = fetch_latest_probe_results(host_ids)
+      
       @group_rows = @groups.map do |group|
         {
           group: group,
-          host_rows: group.hosts.order(:name).map { |host| build_host_row(host) }
+          host_rows: group.hosts.order(:name).map { |host| build_host_row(host, latest_probe_results[host.id]) }
         }
       end
       @host_rows = @group_rows.flat_map { |entry| entry[:host_rows] }
@@ -35,9 +38,26 @@ module Public
       @incidents = StatusPage::IncidentBuilder.call(@groups.flat_map(&:hosts)).first(15)
     end
 
-    def build_host_row(host)
+    def fetch_latest_probe_results(host_ids)
+      return {} if host_ids.blank?
+
+      table_name = ProbeResult.table_name
+      subquery = ProbeResult
+        .select("host_id, MAX(recorded_at) AS max_recorded_at")
+        .where(host_id: host_ids)
+        .group(:host_id)
+
+      ProbeResult
+        .joins(
+          "INNER JOIN (#{subquery.to_sql}) latest " \
+          "ON #{table_name}.host_id = latest.host_id " \
+          "AND #{table_name}.recorded_at = latest.max_recorded_at"
+        )
+        .index_by(&:host_id)
+    end
+
+    def build_host_row(host, latest_result)
       blocks = StatusPage::UptimeBucketBuilder.for_host(host)
-      latest_result = host.latest_probe_result
 
       {
         host: host,
