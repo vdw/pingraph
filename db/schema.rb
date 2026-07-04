@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_15_213000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_04_101041) do
   create_table "groups", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -38,6 +38,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_15_213000) do
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
     t.boolean "verify_ssl", default: true, null: false
+    t.index ["group_id", "name"], name: "index_hosts_on_group_id_and_name"
+    t.index ["group_id", "status"], name: "index_hosts_on_group_id_and_status"
     t.index ["group_id"], name: "index_hosts_on_group_id"
   end
 
@@ -57,6 +59,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_15_213000) do
     t.datetime "updated_at", null: false
     t.index ["host_id", "probe_type", "recorded_at"], name: "index_probe_results_on_host_probe_type_recorded_at"
     t.index ["host_id", "recorded_at"], name: "index_probe_results_on_host_id_and_recorded_at"
+    t.index ["host_id", "success"], name: "index_probe_results_on_host_id_and_success"
     t.index ["host_id"], name: "index_probe_results_on_host_id"
     t.index ["recorded_at"], name: "index_probe_results_on_recorded_at"
   end
@@ -227,6 +230,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_15_213000) do
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
     t.index ["host_id", "recorded_at"], name: "index_speed_tests_on_host_id_and_recorded_at"
+    t.index ["host_id", "status"], name: "index_speed_tests_on_host_id_and_status"
     t.index ["host_id"], name: "index_speed_tests_on_host_id"
     t.index ["recorded_at"], name: "index_speed_tests_on_recorded_at"
     t.index ["status"], name: "index_speed_tests_on_status"
