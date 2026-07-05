@@ -138,6 +138,21 @@
       </div>
       <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Used by the dashboard and public status page to mark latency-based degradation.</p>
     </div>
+
+    <div class="border-t border-gray-200 dark:border-gray-700 pt-5">
+      <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+        <%= form.check_box :notifications_enabled,
+              class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" %>
+        Send notifications for this host
+      </label>
+      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Delivered through the channels configured in Settings.</p>
+
+      <label class="mt-3 inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+        <%= form.check_box :notify_on_degraded,
+              class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" %>
+        Also alert on Degraded (not just Down)
+      </label>
+    </div>
   </div>
 
   <div class="mt-6 flex items-center gap-3">

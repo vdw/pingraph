@@ -171,6 +171,6 @@ class HostsController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def host_params
-      params.expect(host: [ :name, :address, :interval, :group_id, :probe_type, :port, :expected_status_code, :expected_status_code_range, :verify_ssl, :latency_threshold_ms ])
+      params.expect(host: [ :name, :address, :interval, :group_id, :probe_type, :port, :expected_status_code, :expected_status_code_range, :verify_ssl, :latency_threshold_ms, :notifications_enabled, :notify_on_degraded ])
     end
 end

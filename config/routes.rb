@@ -20,7 +20,9 @@ Rails.application.routes.draw do
     end
   end
 
-  resource :settings, only: [ :edit, :update ]
+  resource :settings, only: [ :edit, :update ] do
+    post :test_notification
+  end
 
   resource :session
   resources :passwords, param: :token

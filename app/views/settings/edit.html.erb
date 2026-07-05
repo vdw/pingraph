@@ -1,5 +1,12 @@
 <% content_for :title, "Settings" %>
 
+<%
+  input_classes = "block w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+  label_classes = "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+  hint_classes  = "mt-1 text-xs text-gray-400 dark:text-gray-500"
+  checkbox_classes = "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+%>
+
 <div class="max-w-xl">
   <div class="mb-6">
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
@@ -24,21 +31,107 @@
       <% end %>
 
       <div>
-        <%= form.label :probe_result_retention_days, "Probe result retention", class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
+        <%= form.label :probe_result_retention_days, "Probe result retention", class: label_classes %>
         <%= form.select :probe_result_retention_days,
               options_for_select(Setting::RETENTION_OPTIONS.map { |days| [ "#{days} days", days ] }, @setting.probe_result_retention_days),
               {},
-              class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white",
-                      "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
-                @setting.errors[:probe_result_retention_days].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
-        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              class: input_classes %>
+        <p class="<%= hint_classes %>">
           Deletes probe results older than this threshold during the nightly cleanup job (2:00 AM).
         </p>
+      </div>
+
+      <div class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">
+          Alerts fire when a host changes state (Down, and recovery back to Up). Enable per-host
+          alerting on each host's page.
+        </p>
+
+        <div>
+          <%= form.label :base_url, "Base URL", class: label_classes %>
+          <%= form.text_field :base_url, placeholder: "https://pingraph.mylan.home", class: input_classes %>
+          <p class="<%= hint_classes %>">Public address of this instance — used to build the "View host" link in alerts.</p>
+        </div>
+
+        <div class="mt-6 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200">
+            <%= form.check_box :slack_enabled, class: checkbox_classes %>
+            Slack
+          </label>
+          <div class="mt-3">
+            <%= form.label :slack_webhook_url, "Incoming webhook URL", class: label_classes %>
+            <%= form.text_field :slack_webhook_url, placeholder: "https://hooks.slack.com/services/…", class: "#{input_classes} font-mono" %>
+          </div>
+        </div>
+
+        <div class="mt-6 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200">
+            <%= form.check_box :email_enabled, class: checkbox_classes %>
+            Email (SMTP)
+          </label>
+
+          <div class="mt-3 grid grid-cols-3 gap-3">
+            <div class="col-span-2">
+              <%= form.label :smtp_address, "SMTP server", class: label_classes %>
+              <%= form.text_field :smtp_address, placeholder: "smtp.example.com", class: input_classes %>
+            </div>
+            <div>
+              <%= form.label :smtp_port, "Port", class: label_classes %>
+              <%= form.number_field :smtp_port, min: 1, max: 65_535, class: input_classes %>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <%= form.label :smtp_user_name, "Username", class: label_classes %>
+            <%= form.text_field :smtp_user_name, autocomplete: "off", class: input_classes %>
+          </div>
+
+          <div class="mt-3">
+            <%= form.label :smtp_password, "Password", class: label_classes %>
+            <%= form.password_field :smtp_password, autocomplete: "new-password",
+                  placeholder: @setting.smtp_password.present? ? "•••••••• (leave blank to keep current)" : nil,
+                  class: input_classes %>
+          </div>
+
+          <div class="mt-3 grid grid-cols-2 gap-3">
+            <div>
+              <%= form.label :smtp_authentication, "Authentication", class: label_classes %>
+              <%= form.select :smtp_authentication,
+                    options_for_select(Setting::SMTP_AUTHENTICATION_OPTIONS.map { |a| [ a, a ] }, @setting.smtp_authentication),
+                    {},
+                    class: input_classes %>
+            </div>
+            <div class="flex items-end pb-2">
+              <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <%= form.check_box :smtp_starttls, class: checkbox_classes %>
+                Use STARTTLS
+              </label>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <%= form.label :notification_from_email, "From address", class: label_classes %>
+            <%= form.email_field :notification_from_email, placeholder: "pingraph@example.com", class: input_classes %>
+          </div>
+
+          <div class="mt-3">
+            <%= form.label :notification_recipient_email, "Recipient address", class: label_classes %>
+            <%= form.email_field :notification_recipient_email, placeholder: "you@example.com", class: input_classes %>
+          </div>
+        </div>
       </div>
 
       <div class="mt-6">
         <%= form.submit "Save settings", class: "rounded-lg bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm cursor-pointer transition-colors" %>
       </div>
     <% end %>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 mt-4">
+    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Test notification</h3>
+    <p class="<%= hint_classes %> mb-3">Sends a sample alert through your saved channels. Save your settings first.</p>
+    <%= button_to "Send test notification", test_notification_settings_path,
+          class: "rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors" %>
   </div>
 </div>
