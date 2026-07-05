@@ -24,6 +24,7 @@ Monitor latency trends, packet loss, and service availability in real-time with 
 - **Speed Tests** — On-demand throughput tests using iperf3
 
 ### Monitoring & Alerts
+- **Notifications** — Slack and email alerts on status changes (Down, Degraded, and recovery), with per-host control and a built-in "Send test notification" button
 - **Configurable Thresholds** — Set latency thresholds for degraded state (default: 350ms)
 - **Health Status Tracking** — Automatic status transitions (up → degraded → down)
 - **Historical Data** — 90-day retention with configurable cleanup (30/60/90 days)
@@ -89,6 +90,7 @@ Then open [http://localhost:3000](http://localhost:3000)
 | `RAILS_MASTER_KEY` | — | **Required.** Encryption key for credentials. Generate with: `openssl rand -base64 32` |
 | `TIME_ZONE` | `UTC` | Set dashboard timezone (e.g., `Eastern Time (US & Canada)`, `Europe/London`, `Asia/Tokyo`) |
 | `SOLID_QUEUE_IN_PUMA=true` | — | For single-container deployments (runs scheduler + worker together) |
+| `ACTIVE_RECORD_ENCRYPTION_*` | auto-generated | *Optional.* Supply your own keys for encrypting notification secrets (`PRIMARY_KEY`, `DETERMINISTIC_KEY`, `KEY_DERIVATION_SALT`). If unset, a key is generated and stored in `storage/`. |
 
 ### First Steps After Login
 
@@ -99,6 +101,28 @@ Then open [http://localhost:3000](http://localhost:3000)
    - **Monitor a port:** `192.168.1.10:443` (TCP)
 3. **Set Thresholds** — Adjust latency thresholds (default 350ms) to match your needs
 4. **Create Status Pages** — Enable public status page for each group to share with users
+5. **Set Up Notifications** — Add a Slack webhook and/or SMTP details in Settings so you're alerted when a host goes down (see [Notifications](#notifications))
+
+---
+
+## Notifications
+
+Get alerted the moment something breaks — no need to watch the dashboard. Configure channels in **Settings → Notifications**:
+
+- **Base URL** — the address you use to reach Pingraph (e.g. `https://pingraph.mylan.home` or `http://192.168.1.50:3000`). Used to build the "View host" link inside each alert.
+- **Slack** — paste an [Incoming Webhook](https://api.slack.com/messaging/webhooks) URL.
+- **Email** — enter SMTP server details, credentials, and a recipient address.
+
+Both channels can be active at the same time. Click **Send test notification** to confirm your setup.
+
+**When alerts fire:** only on *status changes*, so a host that stays down produces one alert, not one per probe cycle.
+
+- **Down** and **recovery** (back to Up) alerts are always sent.
+- **Degraded** alerts are opt-in — enable *Also alert on Degraded* on a host.
+
+Toggle alerting per host with **Send notifications for this host** on the host's edit page (on by default once a channel is configured).
+
+**Security:** Slack webhook URLs and SMTP passwords are encrypted at rest. The encryption key is generated automatically on first boot and stored in `storage/` — keep that volume persistent (it already holds your database). To manage keys yourself, set the `ACTIVE_RECORD_ENCRYPTION_*` environment variables instead.
 
 ---
 
@@ -113,6 +137,8 @@ Then open [http://localhost:3000](http://localhost:3000)
 - **Degraded** — Successful probe but high latency, or 1-2 consecutive failures
 - **Down** — 2+ consecutive probe failures
 - **Unknown** — Never probed
+
+**Alerting:** When a host changes state, Pingraph sends Slack/email notifications (if configured). Alerts fire on transitions only — a host that stays down produces a single alert, not one per probe cycle.
 
 **Data Retention:** Results are kept for 90 days by default, configurable in Settings.
 
