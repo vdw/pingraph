@@ -32,6 +32,14 @@ module StatusPage
       end
     end
 
+    def self.percentage(blocks)
+      total = blocks.sum { |b| b[:sample_count] }
+      return nil if total.zero?
+
+      healthy = blocks.sum { |b| b[:healthy_count] }
+      (healthy.to_f / total * 100).round(1)
+    end
+
     def self.overall_state(states)
       return :down if states.include?(:down)
       return :degraded if states.include?(:degraded)

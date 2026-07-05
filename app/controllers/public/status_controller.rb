@@ -57,13 +57,16 @@ module Public
     end
 
     def build_host_row(host, latest_result)
-      blocks = StatusPage::UptimeBucketBuilder.for_host(host)
+      blocks = Rails.cache.fetch([ "status_page/uptime_blocks", host.id, host.last_probed_at&.to_i ], expires_in: 1.hour) do
+        StatusPage::UptimeBucketBuilder.for_host(host)
+      end
 
       {
         host: host,
         latest_result: latest_result,
         blocks: blocks,
         average_latency: average_latency_for(blocks),
+        uptime_percentage: StatusPage::UptimeBucketBuilder.percentage(blocks),
         state: StatusPage::ResultStateCalculator.latest_state(host)
       }
     end

@@ -36,4 +36,19 @@ class StatusPageUptimeBucketBuilderTest < ActiveSupport::TestCase
       assert_equal :down, blocks.last[:state]
     end
   end
+
+  test "percentage is nil when there are no samples" do
+    assert_nil StatusPage::UptimeBucketBuilder.percentage([])
+    assert_nil StatusPage::UptimeBucketBuilder.percentage([ { sample_count: 0, healthy_count: 0 } ])
+  end
+
+  test "percentage sums healthy and total samples across buckets" do
+    blocks = [
+      { sample_count: 10, healthy_count: 10 },
+      { sample_count: 10, healthy_count: 9 },
+      { sample_count: 0, healthy_count: 0 }
+    ]
+
+    assert_equal 95.0, StatusPage::UptimeBucketBuilder.percentage(blocks)
+  end
 end

@@ -35,4 +35,39 @@ class Public::StatusControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
   end
+
+  test "index renders uptime percentage for a host with probe data" do
+    group = groups(:one)
+    group.update!(is_public: true, status_slug: "core-infra")
+    host = hosts(:one)
+    host.probe_results.delete_all
+    host.probe_results.create!(probe_type: :tcp, success: true, recorded_at: 10.minutes.ago)
+
+    get public_status_url
+
+    assert_response :success
+    assert_includes response.body, "100.0%"
+  end
+
+  test "index renders N/A uptime for a host with no probe data" do
+    group = groups(:one)
+    group.update!(is_public: true, status_slug: "core-infra")
+    host = hosts(:one)
+    host.probe_results.delete_all
+
+    get public_status_url
+
+    assert_response :success
+    assert_includes response.body, "N/A"
+  end
+
+  test "layout includes a 60 second meta refresh" do
+    group = groups(:one)
+    group.update!(is_public: true, status_slug: "core-infra")
+
+    get public_status_url
+
+    assert_response :success
+    assert_includes response.body, %(<meta http-equiv="refresh" content="60">)
+  end
 end
