@@ -1,0 +1,23 @@
+<%= @payload.host_name %> <%= @payload.headline %>
+
+Group:        <%= @payload.group_name %>
+Status:       <%= @payload.status.to_s.capitalize %>
+<% if @payload.error_message.present? -%>
+Error:        <%= @payload.error_message %>
+<% end -%>
+<% if @payload.packet_loss.to_i.positive? -%>
+Packet loss:  <%= @payload.packet_loss %>%
+<% end -%>
+<% if @payload.latency.present? -%>
+Latency:      <%= @payload.latency.round(1) %> ms
+<% end -%>
+<% if @payload.status_code.present? -%>
+HTTP status:  <%= @payload.status_code %>
+<% end -%>
+<% if @payload.host_url.present? -%>
+
+View host: <%= @payload.host_url %>
+<% end -%>
+
+--
+Pingraph

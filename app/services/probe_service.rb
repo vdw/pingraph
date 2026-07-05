@@ -38,7 +38,8 @@ class ProbeService
       probe_icmp(host)
     end
 
-    persist_result!(host, result)
+    alert = persist_result!(host, result)
+    enqueue_notification(alert)
     result
   rescue => e
     Rails.logger.error "[ProbeService] Error probing #{host.address}: #{e.message}"
@@ -52,7 +53,8 @@ class ProbeService
       recorded_at: Time.current
     )
 
-    persist_result!(host, result)
+    alert = persist_result!(host, result)
+    enqueue_notification(alert)
     result
   end
 
@@ -161,7 +163,11 @@ class ProbeService
   end
 
   # Keep writes minimal to reduce lock contention under SQLite WAL.
+  # Returns a NotificationPayload when the status transition warrants an alert, else nil.
+  # The payload is enqueued by the caller after this transaction commits.
   def self.persist_result!(host, result)
+    alert = nil
+
     Host.transaction do
       host.probe_results.create!(
         probe_type: result.probe_type,
@@ -193,7 +199,20 @@ class ProbeService
         consecutive_failures: failures,
         updated_at: Time.current
       )
+
+      # Decide + advance last_notified_status transactionally; enqueue happens post-commit.
+      alert = AlertEvaluator.evaluate(host, result, computed_status)
     end
+
+    alert
+  end
+
+  # Enqueued only after persist_result!'s transaction has committed, so a rollback can't
+  # emit a phantom alert and the delivery job can't race the commit.
+  def self.enqueue_notification(payload)
+    return if payload.nil?
+
+    DeliverNotificationJob.perform_later(payload.to_job_args)
   end
 
   def self.icmp_failure_result
@@ -209,5 +228,5 @@ class ProbeService
   def self.elapsed_ms(start)
     ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - start) * 1000.0).round(2)
   end
-  private_class_method :persist_result!, :icmp_failure_result, :elapsed_ms
+  private_class_method :persist_result!, :enqueue_notification, :icmp_failure_result, :elapsed_ms
 end

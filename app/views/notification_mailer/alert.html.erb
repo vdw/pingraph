@@ -1,0 +1,61 @@
+<%
+  accent = case @payload.event
+           when :down then "#dc2626"
+           when :degraded then "#d97706"
+           when :recovery then "#16a34a"
+           else "#6b7280"
+           end
+%>
+<div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #111827; max-width: 560px;">
+  <div style="border-left: 4px solid <%= accent %>; padding: 4px 16px; margin-bottom: 20px;">
+    <h1 style="font-size: 18px; margin: 0;">
+      <%= @payload.host_name %> <span style="color: <%= accent %>;"><%= @payload.headline %></span>
+    </h1>
+  </div>
+
+  <table cellpadding="0" cellspacing="0" style="font-size: 14px; line-height: 1.6;">
+    <tr>
+      <td style="color: #6b7280; padding-right: 16px; vertical-align: top;">Group</td>
+      <td><%= @payload.group_name %></td>
+    </tr>
+    <tr>
+      <td style="color: #6b7280; padding-right: 16px; vertical-align: top;">Status</td>
+      <td><%= @payload.status.to_s.capitalize %></td>
+    </tr>
+    <% if @payload.error_message.present? %>
+      <tr>
+        <td style="color: #6b7280; padding-right: 16px; vertical-align: top;">Error</td>
+        <td><%= @payload.error_message %></td>
+      </tr>
+    <% end %>
+    <% if @payload.packet_loss.to_i.positive? %>
+      <tr>
+        <td style="color: #6b7280; padding-right: 16px; vertical-align: top;">Packet loss</td>
+        <td><%= @payload.packet_loss %>%</td>
+      </tr>
+    <% end %>
+    <% if @payload.latency.present? %>
+      <tr>
+        <td style="color: #6b7280; padding-right: 16px; vertical-align: top;">Latency</td>
+        <td><%= @payload.latency.round(1) %> ms</td>
+      </tr>
+    <% end %>
+    <% if @payload.status_code.present? %>
+      <tr>
+        <td style="color: #6b7280; padding-right: 16px; vertical-align: top;">HTTP status</td>
+        <td><%= @payload.status_code %></td>
+      </tr>
+    <% end %>
+  </table>
+
+  <% if @payload.host_url.present? %>
+    <p style="margin-top: 24px;">
+      <a href="<%= @payload.host_url %>"
+         style="background: <%= accent %>; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; display: inline-block;">
+        View host in Pingraph
+      </a>
+    </p>
+  <% end %>
+
+  <p style="margin-top: 28px; font-size: 12px; color: #9ca3af;">Pingraph</p>
+</div>
