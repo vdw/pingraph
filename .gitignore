@@ -39,3 +39,4 @@
 
 # VS Code Copilot skill files
 .github/skills/
+local/
