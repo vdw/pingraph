@@ -18,6 +18,16 @@ class Host < ApplicationRecord
     down: 3
   }, default: :unknown
 
+  # Mirrors the status enum. Tracks the last state the user was actually notified about,
+  # which is the baseline for alert de-duplication. Prefixed to avoid method collisions
+  # with the identically-valued :status enum (e.g. #last_notified_up? vs #up?).
+  enum :last_notified_status, {
+    unknown: 0,
+    up: 1,
+    degraded: 2,
+    down: 3
+  }, default: :unknown, prefix: :last_notified
+
   validates :name, presence: true
   validates :address, presence: true
   validate :address_unique_within_group

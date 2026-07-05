@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_04_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_04_131100) do
   create_table "groups", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -30,9 +30,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_130000) do
     t.integer "group_id", null: false
     t.integer "interval", default: 60, null: false
     t.string "last_error_message"
+    t.integer "last_notified_status", default: 0, null: false
     t.datetime "last_probed_at"
     t.float "latency_threshold_ms", default: 350.0, null: false
     t.string "name"
+    t.boolean "notifications_enabled", default: true, null: false
+    t.boolean "notify_on_degraded", default: false, null: false
     t.integer "port"
     t.integer "probe_type", default: 0, null: false
     t.integer "status", default: 0, null: false
@@ -76,8 +79,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_130000) do
   end
 
   create_table "settings", force: :cascade do |t|
+    t.string "base_url"
     t.datetime "created_at", null: false
+    t.boolean "email_enabled", default: false, null: false
+    t.string "notification_from_email"
+    t.string "notification_recipient_email"
     t.integer "probe_result_retention_days", default: 90, null: false
+    t.boolean "slack_enabled", default: false, null: false
+    t.text "slack_webhook_url"
+    t.string "smtp_address"
+    t.string "smtp_authentication", default: "plain", null: false
+    t.text "smtp_password"
+    t.integer "smtp_port", default: 587, null: false
+    t.boolean "smtp_starttls", default: true, null: false
+    t.string "smtp_user_name"
     t.datetime "updated_at", null: false
   end
 
