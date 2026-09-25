@@ -56,7 +56,7 @@
           <% @recent_probe_results.each do |probe_result| %>
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
               <td class="py-2.5 px-4 text-sm text-gray-500 dark:text-gray-400 font-mono">
-                <%= probe_result.recorded_at.strftime("%Y-%m-%d %H:%M:%S") %>
+                <%= local_time(probe_result.recorded_at, format: :datetime) %>
               </td>
               <td class="py-2.5 px-4 text-sm text-gray-500 dark:text-gray-400 uppercase">
                 <%= probe_result.probe_type %>
@@ -78,6 +78,9 @@
                         'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' %>">
                     <%= probe_result.packet_loss %>%
                   </span>
+                  <% if !probe_result.success? && probe_result.error_message.present? %>
+                    <span class="ml-1 text-xs text-gray-500 dark:text-gray-400"><%= probe_result.error_message %></span>
+                  <% end %>
                 <% elsif probe_result.http? %>
                   <span class="text-sm text-gray-500 dark:text-gray-400">
                     <%= probe_result.success? ? "HTTP #{probe_result.status_code}" : (probe_result.error_message.presence || "HTTP failed") %>

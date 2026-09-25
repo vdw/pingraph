@@ -10,6 +10,7 @@ class ProbeServiceNotificationsTest < ActiveJob::TestCase
       notifications_enabled: true,
       notify_on_degraded: false
     )
+    Setting.current.update_columns(slack_enabled: true, slack_webhook_url: "https://hooks.slack.com/services/x", base_url: "https://pg.test")
   end
 
   def fail_result
@@ -31,12 +32,12 @@ class ProbeServiceNotificationsTest < ActiveJob::TestCase
 
   test "confirmed Down alerts once, a repeat Down does not, and recovery alerts" do
     stub_probe_icmp([ fail_result, fail_result, fail_result, ok_result ]) do
-      # 1st failure -> degraded (pending down); suppressed because notify_on_degraded is false
+      # 1st failure -> not enough evidence yet: stays up, no alert
       assert_enqueued_jobs 0, only: DeliverNotificationJob do
         ProbeService.execute(@host)
       end
       @host.reload
-      assert_equal "degraded", @host.status
+      assert_equal "up", @host.status
       assert_equal "up", @host.last_notified_status
 
       # 2nd failure -> confirmed Down: exactly one alert
@@ -68,9 +69,28 @@ class ProbeServiceNotificationsTest < ActiveJob::TestCase
       end
     end
 
-    args = enqueued_jobs.find { |j| j[:job] == DeliverNotificationJob }[:args].first
-    payload = NotificationPayload.from_job_args(args)
+    delivery_id = enqueued_jobs.find { |j| j[:job] == DeliverNotificationJob }[:args].first
+    delivery = NotificationDelivery.find(delivery_id)
+    assert_equal "slack", delivery.channel
+    assert delivery.pending?
+    payload = delivery.notification_payload
     assert_equal @host.name, payload.host_name
     assert_equal :down, payload.event
+  end
+
+  test "one delivery per enabled channel, recorded with the alert decision" do
+    Setting.current.update_columns(email_enabled: true, smtp_address: "smtp.test",
+      notification_from_email: "from@test.dev", notification_recipient_email: "to@test.dev")
+
+    stub_probe_icmp([ fail_result, fail_result ]) do
+      ProbeService.execute(@host)
+      assert_difference("NotificationDelivery.count", 2) do
+        assert_enqueued_jobs 2, only: DeliverNotificationJob do
+          ProbeService.execute(@host)
+        end
+      end
+    end
+
+    assert_equal %w[email slack], NotificationDelivery.pluck(:channel).sort
   end
 end

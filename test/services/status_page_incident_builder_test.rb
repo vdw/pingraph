@@ -7,6 +7,7 @@ class StatusPageIncidentBuilderTest < ActiveSupport::TestCase
     host.probe_results.delete_all
 
     travel_to Time.zone.parse("2026-03-15 12:00:00 UTC") do
+      host.probe_results.create!(probe_type: :icmp, success: true, latency: 120.0, min_latency: 110.0, max_latency: 130.0, packet_loss: 0, recorded_at: 95.minutes.ago)
       host.probe_results.create!(probe_type: :icmp, success: true, latency: 120.0, min_latency: 110.0, max_latency: 130.0, packet_loss: 0, recorded_at: 90.minutes.ago)
       host.probe_results.create!(probe_type: :icmp, success: true, latency: 20.0, min_latency: 19.0, max_latency: 21.0, packet_loss: 0, recorded_at: 80.minutes.ago)
       host.probe_results.create!(probe_type: :tcp, success: false, error_message: "connection refused", recorded_at: 60.minutes.ago)
@@ -18,6 +19,29 @@ class StatusPageIncidentBuilderTest < ActiveSupport::TestCase
       assert_equal 2, incidents.size
       assert_equal :down, incidents.first.state
       assert_equal :degraded, incidents.last.state
+      # Backdated to the first sample of each streak.
+      assert_equal 60.minutes.ago, incidents.first.start_at
+      assert_equal 95.minutes.ago, incidents.last.start_at
+    end
+  end
+
+  test "a single bad sample does not open an incident" do
+    host = hosts(:one)
+    host.probe_results.delete_all
+
+    travel_to Time.zone.parse("2026-03-15 12:00:00 UTC") do
+      host.probe_results.create!(probe_type: :icmp, success: true, latency: 5.0, packet_loss: 0, recorded_at: 30.minutes.ago)
+      host.probe_results.create!(probe_type: :icmp, success: false, packet_loss: 100, recorded_at: 29.minutes.ago)
+      host.probe_results.create!(probe_type: :icmp, success: true, latency: 5.0, packet_loss: 40, recorded_at: 28.minutes.ago)
+      host.probe_results.create!(probe_type: :icmp, success: true, latency: 5.0, packet_loss: 0, recorded_at: 27.minutes.ago)
+
+      # fail + lossy in a row = Degraded; a lone blip before or after would not be.
+      incidents = StatusPage::IncidentBuilder.call([ host ])
+      assert_equal 1, incidents.size
+      assert_equal :degraded, incidents.first.state
+
+      host.probe_results.where(recorded_at: 28.minutes.ago).delete_all
+      assert_empty StatusPage::IncidentBuilder.call([ host ])
     end
   end
 end

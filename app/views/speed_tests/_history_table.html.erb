@@ -20,7 +20,7 @@
         <% recent_speed_tests.each do |speed_test| %>
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
             <td class="py-2.5 px-4 text-sm text-gray-500 dark:text-gray-400 font-mono">
-              <%= (speed_test.recorded_at || speed_test.created_at).strftime("%Y-%m-%d %H:%M:%S") %>
+              <%= local_time(speed_test.recorded_at || speed_test.created_at, format: :datetime) %>
             </td>
             <td class="py-2.5 px-4 text-sm font-medium text-gray-900 dark:text-white">
               <%= speed_test.host.name %>
@@ -36,9 +36,18 @@
             </td>
             <td class="py-2.5 px-4 text-sm">
               <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
-                <%= speed_test.completed? ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' %>">
+                <%= if speed_test.completed?
+                      'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                    elsif speed_test.failed?
+                      'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                    else
+                      'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                    end %>">
                 <%= speed_test.status.humanize %>
               </span>
+              <% if speed_test.failed? && speed_test.error_message.present? %>
+                <p class="mt-1 text-xs text-red-600 dark:text-red-400 max-w-md"><%= speed_test.error_message %></p>
+              <% end %>
             </td>
           </tr>
         <% end %>

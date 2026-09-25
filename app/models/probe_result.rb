@@ -14,12 +14,14 @@ class ProbeResult < ApplicationRecord
     interval_seconds = interval_minutes.to_i * 60
     bucket_epoch_sql = "(CAST(strftime('%s', recorded_at) AS INTEGER) / #{interval_seconds}) * #{interval_seconds}"
 
+    # Latency aggregates only successful checks (older rows stored time-to-error on failures).
     where("recorded_at >= ?", start_time)
       .select(
         "#{bucket_epoch_sql} AS bucket_epoch, " \
-        "AVG(latency) AS latency, " \
-        "MIN(min_latency) AS min_latency, " \
-        "MAX(max_latency) AS max_latency, " \
+        "AVG(CASE WHEN success THEN latency END) AS latency, " \
+        "MIN(CASE WHEN success THEN min_latency END) AS min_latency, " \
+        "MAX(CASE WHEN success THEN max_latency END) AS max_latency, " \
+        "AVG(CASE WHEN success THEN jitter END) AS jitter, " \
         "MAX(packet_loss) AS packet_loss"
       )
       .group("bucket_epoch")

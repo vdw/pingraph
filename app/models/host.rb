@@ -1,9 +1,15 @@
 class Host < ApplicationRecord
   DEFAULT_LATENCY_THRESHOLD_MS = 350.0
+  # A sample counts as a problem at 2 of 5 lost packets; a single dropped packet is noise.
+  DEGRADED_PACKET_LOSS_PERCENT = 40
+  # Consecutive problem samples (failed, slow or lossy) before the host turns Degraded.
+  DEGRADED_THRESHOLD = 2
 
   belongs_to :group
-  has_many :probe_results, dependent: :destroy
-  has_many :speed_tests, dependent: :destroy
+  # delete_all: one DELETE statement instead of instantiating ~130k rows per busy host.
+  has_many :probe_results, dependent: :delete_all
+  has_many :speed_tests, dependent: :delete_all
+  has_many :notification_deliveries, dependent: :nullify
 
   enum :probe_type, {
     icmp: 0,
@@ -39,32 +45,41 @@ class Host < ApplicationRecord
   validates :verify_ssl, inclusion: { in: [ true, false ] }, if: :http?
 
   validate :address_must_be_valid_http_url, if: :http?
+  validate :address_must_be_valid_network_target, unless: :http?
   validate :probe_type_immutable, on: :update
 
   before_validation :normalize_probe_specific_fields
+  # A new interval takes effect on the next poller run instead of after the old one.
+  before_save -> { self.next_probe_at = nil }, if: :interval_changed?
 
   def latest_probe_result
     probe_results.order(recorded_at: :desc).first
   end
 
+  # The persisted status is computed by ProbeService from consecutive samples, so a single
+  # bad sample does not flip the badge (and no extra query is needed per host).
   def status_badge
-    result = latest_probe_result
-    return :unknown if result.nil?
-    return :down if status == "down"
-    return :degraded if result_degraded?(result)
-    return :degraded unless result.success?
-
-    :up
+    status.to_sym
   end
 
+  # True when this one sample is a problem: failed, too slow, or too much packet loss.
+  # Status only changes after several of these in a row (see ProbeService).
   def result_degraded?(result)
     return false if result.nil?
     success = result.respond_to?(:success?) ? result.success? : result.success
-    icmp_result = result.respond_to?(:icmp?) ? result.icmp? : result.probe_type.to_s == "icmp"
 
     return true unless success
-    return true if icmp_result && result.packet_loss.to_i >= 5
+    return true if result_lossy?(result)
 
+    result_slow?(result)
+  end
+
+  def result_lossy?(result)
+    icmp_result = result.respond_to?(:icmp?) ? result.icmp? : result.probe_type.to_s == "icmp"
+    icmp_result && result.packet_loss.to_i >= DEGRADED_PACKET_LOSS_PERCENT
+  end
+
+  def result_slow?(result)
     result.latency.present? && result.latency.to_f > latency_threshold_ms.to_f
   end
 
@@ -92,7 +107,7 @@ class Host < ApplicationRecord
   end
 
   def speed_test_in_progress?
-    speed_tests.where(status: [ SpeedTest.statuses[:queued], SpeedTest.statuses[:running] ]).exists?
+    speed_tests.in_progress.where(updated_at: (SpeedTest::STALE_AFTER.ago)..).exists?
   end
 
   def recent_speed_tests(limit = 5)
@@ -127,6 +142,16 @@ class Host < ApplicationRecord
     errors.add(:probe_type, "cannot be changed after the host is created") if probe_type_changed?
   end
 
+  def address_must_be_valid_network_target
+    return if address.blank?
+
+    if tcp? && address.to_s.strip.match?(/\A[^:]+:\d+\z/)
+      errors.add(:address, "should not include a port; enter the port in the Port field")
+    elsif !NetworkAddress.valid?(address)
+      errors.add(:address, "must be a hostname or IP address (for example 192.168.1.10 or nas.local)")
+    end
+  end
+
   def address_must_be_valid_http_url
     uri = URI.parse(normalized_http_address)
     if uri.host.blank? || !%w[http https].include?(uri.scheme)
@@ -137,6 +162,7 @@ class Host < ApplicationRecord
   end
 
   def normalize_probe_specific_fields
+    self.address = address.strip if address.is_a?(String)
     self.latency_threshold_ms = DEFAULT_LATENCY_THRESHOLD_MS if latency_threshold_ms.blank?
 
     if tcp?

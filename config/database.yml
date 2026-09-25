@@ -6,7 +6,9 @@
 #
 default: &default
   adapter: sqlite3
-  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  # Enough for the web threads and for the probe worker: Solid Queue needs its largest
+  # worker's threads (JOB_THREADS) + 2 (the worker loop and its heartbeat).
+  max_connections: <%= [ ENV.fetch("RAILS_MAX_THREADS", 5).to_i, ENV.fetch("JOB_THREADS", 5).to_i + 2 ].max %>
   timeout: 5000
 
 development:

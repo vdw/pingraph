@@ -20,8 +20,13 @@ module StatusPage
       entries = ResultStateCalculator.entries_for_host(host, start_at: start_at, end_at: end_at)
       incidents = []
       current = nil
+      streak_start = nil
 
       entries.each do |entry|
+        # The first problem sample of a streak: an incident confirmed a sample later is
+        # backdated to when the trouble actually began.
+        streak_start = entry.problem ? (streak_start || entry.result.recorded_at) : nil
+
         if entry.state == :operational
           if current
             current[:end_at] = entry.result.recorded_at
@@ -40,7 +45,7 @@ module StatusPage
 
         current = {
           state: entry.state,
-          start_at: entry.result.recorded_at,
+          start_at: streak_start || entry.result.recorded_at,
           last_at: entry.result.recorded_at,
           message: message_for(host, entry)
         }
@@ -67,8 +72,8 @@ module StatusPage
     def self.message_for(host, entry)
       result = entry.result
       return result.error_message if result.error_message.present?
-      return "Packet loss reached #{result.packet_loss}%" if result.icmp? && result.packet_loss.to_i >= 5
-      return "High latency observed (#{result.latency.round(1)} ms)" if result.latency.present? && result.latency.to_f > host.latency_threshold_ms.to_f
+      return "Packet loss reached #{result.packet_loss}%" if host.result_lossy?(result)
+      return "High latency observed (#{result.latency.round(1)} ms)" if host.result_slow?(result)
       return "Unexpected HTTP status #{result.status_code}" if result.http? && result.status_code.present?
 
       entry.state == :down ? "Probe failure detected" : "Performance degradation detected"

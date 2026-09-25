@@ -52,7 +52,9 @@ class SpeedTestServiceTest < ActiveSupport::TestCase
   end
 
   test "execute refuses unsafe targets" do
-    host = Host.create!(name: "Speed Target", address: "1.1.1.1; rm -rf /", interval: 10, group: groups(:one))
+    host = Host.create!(name: "Speed Target", address: "1.1.1.1", interval: 10, group: groups(:one))
+    # Hosts can no longer be saved with such an address; simulate a legacy row.
+    host.update_column(:address, "1.1.1.1; rm -rf /")
 
     original_capture3 = Open3.method(:capture3)
 
@@ -63,6 +65,26 @@ class SpeedTestServiceTest < ActiveSupport::TestCase
     result = SpeedTestService.execute(host)
 
     assert_not result.success?
+    assert_includes result.error_message, "not a plain hostname or IP address"
+  ensure
+    Open3.singleton_class.define_method(:capture3, original_capture3)
+  end
+
+  test "execute reports the iperf3 error and how to fix it" do
+    host = Host.create!(name: "Speed Target", address: "1.1.1.1", interval: 10, group: groups(:one))
+    original_capture3 = Open3.method(:capture3)
+
+    Open3.singleton_class.define_method(:capture3, ->(*args) {
+      return [ "iperf3 3.0", "", Struct.new(:success?).new(true) ] if args == [ "iperf3", "--version" ]
+
+      [ { "error" => "unable to connect to server: Connection refused" }.to_json, "", Struct.new(:success?).new(false) ]
+    })
+
+    result = SpeedTestService.execute(host)
+
+    assert_not result.success?
+    assert_includes result.error_message, "unable to connect to server"
+    assert_includes result.error_message, "iperf3 -s"
   ensure
     Open3.singleton_class.define_method(:capture3, original_capture3)
   end

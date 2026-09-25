@@ -1,4 +1,5 @@
 class SpeedTestsController < ApplicationController
+  before_action :fail_stale_speed_tests
   before_action :load_hosts
   before_action :set_selected_host
 
@@ -45,6 +46,10 @@ class SpeedTestsController < ApplicationController
   end
 
   private
+
+  def fail_stale_speed_tests
+    SpeedTest.fail_stale!
+  end
 
   def load_hosts
     @hosts = Host.includes(:group).joins(:group).order("groups.name, hosts.name")

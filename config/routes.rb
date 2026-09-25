@@ -24,6 +24,12 @@ Rails.application.routes.draw do
     post :test_notification
   end
 
+  resources :notification_deliveries, only: [ :index ], path: "notifications" do
+    member do
+      post :retry
+    end
+  end
+
   resource :session
   resources :passwords, param: :token
 

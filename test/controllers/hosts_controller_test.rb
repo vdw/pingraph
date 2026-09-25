@@ -110,7 +110,7 @@ class HostsControllerTest < ActionDispatch::IntegrationTest
 
       body = JSON.parse(response.body)
       keys = body.first.keys.sort
-      assert_equal %w[error_message latency max_latency min_latency packet_loss probe_type recorded_at status_code success], keys
+      assert_equal %w[error_message jitter latency max_latency min_latency packet_loss probe_type recorded_at status_code success], keys
       assert_nil body.first.fetch("latency")
       assert_equal 100, body.first.fetch("packet_loss")
       assert_equal "icmp", body.first.fetch("probe_type")

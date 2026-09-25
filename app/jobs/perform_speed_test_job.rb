@@ -15,9 +15,17 @@ class PerformSpeedTestJob < ApplicationJob
         recorded_at: Time.current
       )
     else
-      speed_test.destroy!
+      speed_test.fail!(result.error_message.presence || "Speed test failed")
     end
   rescue ActiveRecord::RecordNotFound
     Rails.logger.warn "[PerformSpeedTestJob] SpeedTest ##{speed_test_id} not found, skipping."
+  rescue => e
+    # Never leave the record "running": that would block new tests for this host.
+    begin
+      speed_test&.fail!("Unexpected error: #{e.message}")
+    rescue ActiveRecord::ActiveRecordError
+      # Keep the original error; SpeedTest.fail_stale! will clean the record up later.
+    end
+    raise
   end
 end

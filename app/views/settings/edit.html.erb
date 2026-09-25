@@ -45,7 +45,9 @@
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h2>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">
           Alerts fire when a host changes state (Down, and recovery back to Up). Enable per-host
-          alerting on each host's page.
+          alerting on each host's page. Failed deliveries are retried automatically; see the
+          <%= link_to "notification log", notification_deliveries_path, class: "text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 underline" %>
+          for every alert sent.
         </p>
 
         <div>

@@ -90,6 +90,9 @@ Then open [http://localhost:3000](http://localhost:3000)
 | `RAILS_MASTER_KEY` | — | **Required.** Encryption key for credentials. Generate with: `openssl rand -base64 32` |
 | `TIME_ZONE` | `UTC` | Set dashboard timezone (e.g., `Eastern Time (US & Canada)`, `Europe/London`, `Asia/Tokyo`) |
 | `SOLID_QUEUE_IN_PUMA=true` | — | For single-container deployments (runs scheduler + worker together) |
+| `JOB_THREADS` | `5` | Threads for the probe worker. Probes mostly wait on the network, so raise this if you monitor many hosts. Alerts always have their own worker. |
+| `APP_HOST` | `localhost` | Host used in email links when no **Base URL** is set in Settings |
+| `MAILER_FROM` | `pingraph@localhost` | Sender address for emails when no **From address** is set in Settings |
 | `ACTIVE_RECORD_ENCRYPTION_*` | auto-generated | *Optional.* Supply your own keys for encrypting notification secrets (`PRIMARY_KEY`, `DETERMINISTIC_KEY`, `KEY_DERIVATION_SALT`). If unset, a key is generated and stored in `storage/`. |
 
 ### First Steps After Login
@@ -98,7 +101,7 @@ Then open [http://localhost:3000](http://localhost:3000)
 2. **Add Hosts** — Monitor services:
    - **Ping a host:** `1.1.1.1` (ICMP)
    - **Check a website:** `https://example.com` (HTTP)
-   - **Monitor a port:** `192.168.1.10:443` (TCP)
+   - **Monitor a port:** address `192.168.1.10`, port `443` (TCP)
 3. **Set Thresholds** — Adjust latency thresholds (default 350ms) to match your needs
 4. **Create Status Pages** — Enable public status page for each group to share with users
 5. **Set Up Notifications** — Add a Slack webhook and/or SMTP details in Settings so you're alerted when a host goes down (see [Notifications](#notifications))
@@ -115,6 +118,8 @@ Get alerted the moment something breaks — no need to watch the dashboard. Conf
 
 Both channels can be active at the same time. Click **Send test notification** to confirm your setup.
 
+**Delivery is retried.** Each alert is sent to each channel separately. If Slack or your SMTP server fails, that channel is retried up to 5 times over about 6 minutes, without re-sending to channels that already worked. Every alert and its result is listed in the **Notification log** (linked from Settings). If an alert still can't be delivered, a red banner appears on every page until a later one succeeds, and you can retry it from the log.
+
 **When alerts fire:** only on *status changes*, so a host that stays down produces one alert, not one per probe cycle.
 
 - **Down** and **recovery** (back to Up) alerts are always sent.
@@ -128,15 +133,17 @@ Toggle alerting per host with **Send notifications for this host** on the host's
 
 ## How It Works
 
-**Polling:** Every minute, Pingraph checks each monitored host according to its configured interval (minimum 10 seconds).
+**Polling:** Every minute, Pingraph schedules each host's checks for the coming minute on exact slots, so a host set to 30 seconds is checked every 30 seconds (minimum 10 seconds). If the queue falls behind, late checks are skipped rather than piling up.
 
-**Latency & Loss:** Probes capture min/average/max latency and packet loss percentage.
+**Latency & Loss:** Probes capture min/average/max latency, jitter (ICMP) and packet loss percentage. Failed checks have no latency, so timeouts don't show up as spikes on the chart.
 
-**Status Calculation:** Hosts automatically transition between states:
-- **Up** — Successful probe, latency within threshold
-- **Degraded** — Successful probe but high latency, or 1-2 consecutive failures
-- **Down** — 2+ consecutive probe failures
-- **Unknown** — Never probed
+**Status Calculation:** Status changes only on a streak, so one dropped packet doesn't raise an alert:
+- **Up** — The latest check was clean
+- **Degraded** — 2 problem checks in a row: slow (above the latency threshold), lossy (2 or more of 5 ping packets lost) or failed
+- **Down** — 2 failed checks in a row
+- **Unknown** — Never probed, or only one check so far and it had a problem
+
+**Uptime %:** Measured over the time Pingraph was actually monitoring. If Pingraph itself was stopped, that time isn't counted as uptime; the status page shows how much of the day was monitored.
 
 **Alerting:** When a host changes state, Pingraph sends Slack/email notifications (if configured). Alerts fire on transitions only — a host that stays down produces a single alert, not one per probe cycle.
 
@@ -251,7 +258,7 @@ Default: 90 days. Change in Settings → Ping Retention.
 
 ### Latency Thresholds
 Each host has a configurable latency threshold (default 350ms):
-- Mark as **Degraded** if latency exceeds threshold (but still responding)
+- Mark as **Degraded** if latency exceeds threshold on 2 checks in a row (but still responding)
 - Different expectations for ICMP (network latency) vs HTTP (app response time)
 - Override per-host as needed
 

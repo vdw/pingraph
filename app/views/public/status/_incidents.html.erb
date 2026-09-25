@@ -4,9 +4,9 @@
       <% incidents.each do |incident| %>
         <li class="grid gap-3 px-5 py-4 text-sm md:grid-cols-[220px_180px_minmax(0,1fr)] md:items-start">
           <div class="text-slate-600 dark:text-slate-300">
-            <p><%= incident.start_at.strftime("%b %-d, %Y, %-I:%M %p") %></p>
+            <p><%= local_time(incident.start_at, format: :short) %></p>
             <p class="mt-1 text-slate-500 dark:text-slate-500">
-              <%= incident.ongoing? ? "Ongoing" : "Ended #{incident.end_at.strftime('%-I:%M %p')}" %>
+              <% if incident.ongoing? %>Ongoing<% else %>Ended <%= local_time(incident.end_at, format: :time) %><% end %>
             </p>
           </div>
           <div>

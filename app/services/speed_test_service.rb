@@ -4,18 +4,18 @@ require "open3"
 class SpeedTestService
   TEST_DURATION_SECONDS = 5
 
-  Result = Struct.new(:success?, :bandwidth_mbps, :protocol, keyword_init: true)
+  Result = Struct.new(:success?, :bandwidth_mbps, :protocol, :error_message, keyword_init: true)
 
   def self.execute(host)
     target = sanitized_target(host.address)
     unless target
       Rails.logger.warn "[SpeedTestService] Refusing unsafe target: #{host.address.inspect}"
-      return Result.new(success?: false)
+      return failure("Address #{host.address.inspect} is not a plain hostname or IP address")
     end
 
     unless iperf3_installed?
       Rails.logger.warn "[SpeedTestService] iperf3 is not installed; skipping host #{host.id}"
-      return Result.new(success?: false)
+      return failure("iperf3 is not installed on the Pingraph server")
     end
 
     stdout, stderr, status = Open3.capture3(
@@ -27,14 +27,14 @@ class SpeedTestService
 
     unless status.success?
       Rails.logger.warn "[SpeedTestService] iperf3 failed for host #{host.id}: #{stderr.strip}"
-      return Result.new(success?: false)
+      return failure(iperf3_error(stdout, stderr))
     end
 
     payload = JSON.parse(stdout)
     bits_per_second = extract_bits_per_second(payload)
     unless bits_per_second
       Rails.logger.warn "[SpeedTestService] Unable to find receiver bits_per_second for host #{host.id}"
-      return Result.new(success?: false)
+      return failure("iperf3 finished but reported no bandwidth")
     end
 
     Result.new(
@@ -44,13 +44,13 @@ class SpeedTestService
     )
   rescue JSON::ParserError => e
     Rails.logger.warn "[SpeedTestService] Invalid JSON output for host #{host.id}: #{e.message}"
-    Result.new(success?: false)
+    failure("iperf3 returned unreadable output")
   rescue Errno::ENOENT
     Rails.logger.warn "[SpeedTestService] iperf3 executable not found"
-    Result.new(success?: false)
+    failure("iperf3 is not installed on the Pingraph server")
   rescue => e
     Rails.logger.error "[SpeedTestService] Unexpected error for host #{host.id}: #{e.message}"
-    Result.new(success?: false)
+    failure(e.message)
   end
 
   private
@@ -62,34 +62,26 @@ class SpeedTestService
     false
   end
 
-  def self.sanitized_target(address)
-    target = address.to_s.strip
-    return nil if target.empty? || target.bytesize > 253
-
-    return target if ipv4?(target)
-    return target if ipv6?(target)
-    return target if hostname?(target)
-
-    nil
+  def self.failure(message)
+    Result.new(success?: false, error_message: message)
   end
 
-  def self.ipv4?(value)
-    value.match?(/\A(?:\d{1,3}\.){3}\d{1,3}\z/) && value.split(".").all? { |part| part.to_i.between?(0, 255) }
-  end
-
-  def self.ipv6?(value)
-    value.match?(/\A[0-9a-f:]+\z/i) && value.include?(":")
-  end
-
-  def self.hostname?(value)
-    return false if value.start_with?(".") || value.end_with?(".")
-
-    labels = value.split(".")
-    return false if labels.empty?
-
-    labels.all? do |label|
-      label.match?(/\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\z/i)
+  # iperf3 -J reports errors in the JSON body ("error": "unable to connect to server: ..."),
+  # with stderr as a fallback for failures before JSON output starts.
+  def self.iperf3_error(stdout, stderr)
+    json_error = begin
+      JSON.parse(stdout)["error"]
+    rescue JSON::ParserError, TypeError
+      nil
     end
+
+    message = json_error.presence || stderr.to_s.strip.presence || "iperf3 failed"
+    message = "#{message} (is an iperf3 server running on the target? Start one with `iperf3 -s`)" if message.include?("unable to connect")
+    message.truncate(500)
+  end
+
+  def self.sanitized_target(address)
+    NetworkAddress.sanitize(address)
   end
 
   def self.extract_bits_per_second(payload)

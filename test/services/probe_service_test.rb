@@ -44,12 +44,15 @@ class ProbeServiceTest < ActiveSupport::TestCase
     assert_difference("host.probe_results.count", +1) do
       result = ProbeService.execute(host)
       assert_not result.success
+      assert_nil result.latency
       assert_includes result.error_message, "Connection refused"
     end
 
     host.reload
-    assert_equal "degraded", host.status
+    # One failed check is not enough evidence to change state.
+    assert_equal "unknown", host.status
     assert_equal 1, host.consecutive_failures
+    assert_equal 1, host.consecutive_issues
     assert_not_nil host.last_error_message
   ensure
     Socket.singleton_class.define_method(:tcp, original_tcp)
@@ -76,7 +79,8 @@ class ProbeServiceTest < ActiveSupport::TestCase
 
     assert_not result.success
     assert_equal 404, result.status_code
-    assert_not_nil result.latency
+    assert_nil result.latency, "failed checks must not be charted as latency"
+    assert_not_nil result.metadata["elapsed_ms"]
     assert_equal "Unexpected HTTP status 404", result.error_message
   ensure
     Net::HTTP.singleton_class.define_method(:new, original_new)
@@ -105,7 +109,9 @@ class ProbeServiceTest < ActiveSupport::TestCase
       recorded_at: Time.current
     )
 
-    assert_difference("host.probe_results.count", +1) do
+    assert_difference("host.probe_results.count", +2) do
+      ProbeService.send(:persist_result!, host, result)
+      assert_equal "unknown", host.reload.status, "a single slow sample must not flip the status"
       ProbeService.send(:persist_result!, host, result)
     end
 

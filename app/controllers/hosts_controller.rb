@@ -156,13 +156,18 @@ class HostsController < ApplicationController
         result.error_message
       end
 
+      # A failed raw check carries no latency (older rows stored the time until the error).
+      # Downsampled buckets already average successful checks only, in SQL.
+      show_latency = success || !interval_minutes.nil?
+      latency_fields = %i[latency min_latency max_latency jitter].index_with do |field|
+        show_latency ? result.read_attribute(field)&.to_f : nil
+      end
+
       {
         recorded_at: recorded_at.iso8601,
         probe_type: probe_type,
         success: success,
-        latency: result.latency&.to_f,
-        min_latency: result.min_latency&.to_f,
-        max_latency: result.max_latency&.to_f,
+        **latency_fields,
         packet_loss: result.packet_loss,
         status_code: status_code,
         error_message: error_message

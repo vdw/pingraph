@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_04_131100) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_25_100300) do
   create_table "groups", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -24,6 +24,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_131100) do
   create_table "hosts", force: :cascade do |t|
     t.string "address"
     t.integer "consecutive_failures", default: 0, null: false
+    t.integer "consecutive_issues", default: 0, null: false
     t.datetime "created_at", null: false
     t.integer "expected_status_code", default: 200, null: false
     t.string "expected_status_code_range", default: "exact", null: false
@@ -34,6 +35,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_131100) do
     t.datetime "last_probed_at"
     t.float "latency_threshold_ms", default: 350.0, null: false
     t.string "name"
+    t.datetime "next_probe_at"
     t.boolean "notifications_enabled", default: true, null: false
     t.boolean "notify_on_degraded", default: false, null: false
     t.integer "port"
@@ -46,12 +48,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_131100) do
     t.index ["group_id", "name"], name: "index_hosts_on_group_id_and_name"
     t.index ["group_id", "status"], name: "index_hosts_on_group_id_and_status"
     t.index ["group_id"], name: "index_hosts_on_group_id"
+    t.index ["next_probe_at"], name: "index_hosts_on_next_probe_at"
+  end
+
+  create_table "notification_deliveries", force: :cascade do |t|
+    t.integer "attempts", default: 0, null: false
+    t.string "channel", null: false
+    t.datetime "created_at", null: false
+    t.datetime "delivered_at"
+    t.text "error_message"
+    t.string "event", null: false
+    t.integer "host_id"
+    t.text "payload", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_notification_deliveries_on_created_at"
+    t.index ["host_id"], name: "index_notification_deliveries_on_host_id"
+    t.index ["status", "created_at"], name: "index_notification_deliveries_on_status_and_created_at"
   end
 
   create_table "probe_results", force: :cascade do |t|
-    t.datetime "created_at", null: false
     t.string "error_message"
     t.integer "host_id", null: false
+    t.float "jitter"
     t.float "latency"
     t.float "max_latency"
     t.text "metadata"
@@ -61,11 +80,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_131100) do
     t.datetime "recorded_at"
     t.integer "status_code"
     t.boolean "success", default: true, null: false
-    t.datetime "updated_at", null: false
-    t.index ["host_id", "probe_type", "recorded_at"], name: "index_probe_results_on_host_probe_type_recorded_at"
     t.index ["host_id", "recorded_at"], name: "index_probe_results_on_host_id_and_recorded_at"
-    t.index ["host_id", "success"], name: "index_probe_results_on_host_id_and_success"
-    t.index ["host_id"], name: "index_probe_results_on_host_id"
     t.index ["recorded_at"], name: "index_probe_results_on_recorded_at"
   end
 
@@ -241,6 +256,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_131100) do
   create_table "speed_tests", force: :cascade do |t|
     t.float "bandwidth_mbps"
     t.datetime "created_at", null: false
+    t.text "error_message"
     t.integer "host_id", null: false
     t.string "protocol", default: "tcp", null: false
     t.datetime "recorded_at"
@@ -262,6 +278,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_131100) do
   end
 
   add_foreign_key "hosts", "groups"
+  add_foreign_key "notification_deliveries", "hosts", on_delete: :nullify
   add_foreign_key "probe_results", "hosts"
   add_foreign_key "sessions", "users"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

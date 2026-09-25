@@ -17,10 +17,21 @@ class NotificationDispatcher
   end
 
   def deliver(payload)
-    results = {}
-    results[:slack] = safe_deliver(:slack, payload) if setting.slack_enabled?
-    results[:email] = safe_deliver(:email, payload) if setting.email_enabled?
-    results
+    enabled_channels.index_with { |name| safe_deliver(name, payload) }
+  end
+
+  def enabled_channels
+    CHANNELS.keys.select { |name| channel_enabled?(name) }
+  end
+
+  def channel_enabled?(name)
+    CHANNELS.key?(name.to_sym) && setting.public_send("#{name}_enabled?")
+  end
+
+  # Delivers to a single channel and raises on failure (used by DeliverNotificationJob,
+  # which retries per channel).
+  def deliver_to!(name, payload)
+    CHANNELS.fetch(name.to_sym).call(setting).deliver(payload)
   end
 
   private
@@ -28,7 +39,7 @@ class NotificationDispatcher
   attr_reader :setting
 
   def safe_deliver(name, payload)
-    CHANNELS.fetch(name).call(setting).deliver(payload)
+    deliver_to!(name, payload)
   rescue => e
     Rails.logger.error("[Notifications] #{name} delivery failed: #{e.class}: #{e.message}")
     e.message

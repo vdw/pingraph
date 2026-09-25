@@ -21,7 +21,7 @@
       <% end %>
     </div>
     <div class="text-sm text-slate-600 dark:text-slate-300">
-      <p>Last updated: <%= generated_at.strftime("%B %-d, %Y, %-I:%M %p") %></p>
+      <p>Last updated: <%= local_time(generated_at, format: :long) %></p>
     </div>
   </div>
 </section>

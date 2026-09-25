@@ -25,6 +25,8 @@ class CleanupProbeResultsJob < ApplicationJob
     scope = scope.where.not(id: latest_ids) if latest_ids.any?
 
     scope.in_batches(of: BATCH_SIZE) { |batch| batch.delete_all }
+
+    NotificationDelivery.where(created_at: ...cutoff).in_batches(of: BATCH_SIZE) { |batch| batch.delete_all }
   end
 
   private
