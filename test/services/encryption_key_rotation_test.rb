@@ -12,6 +12,8 @@ class EncryptionKeyRotationTest < ActiveSupport::TestCase
 
     @setting = Setting.current
     @setting.update!(slack_enabled: true, base_url: "https://pg.test", slack_webhook_url: WEBHOOK, smtp_password: "s3cret")
+    @host = Host.create!(group: groups(:one), name: "NAS", probe_type: :http, address: "https://nas.lan",
+      basic_auth_user: "admin", basic_auth_password: "hunter22")
   end
 
   teardown do
@@ -24,7 +26,7 @@ class EncryptionKeyRotationTest < ActiveSupport::TestCase
     assert rotation.needed?
     old_ciphertext = raw_webhook
 
-    assert_equal Setting.count, rotation.call
+    assert_equal Setting.count + Host.count, rotation.call
 
     keys = YAML.safe_load(@path.read)
     assert_kind_of String, keys["primary_key"]
@@ -36,6 +38,7 @@ class EncryptionKeyRotationTest < ActiveSupport::TestCase
 
     assert_equal WEBHOOK, Setting.find(@setting.id).slack_webhook_url
     assert_equal "s3cret", Setting.find(@setting.id).smtp_password
+    assert_equal "hunter22", Host.find(@host.id).basic_auth_password
 
     use_keys(**@original_keys)
     assert_raises(ActiveRecord::Encryption::Errors::Decryption) { Setting.find(@setting.id).slack_webhook_url }

@@ -4,12 +4,23 @@ class Host < ApplicationRecord
   DEGRADED_PACKET_LOSS_PERCENT = 40
   # Consecutive problem samples (failed, slow or lossy) before the host turns Degraded.
   DEGRADED_THRESHOLD = 2
+  HTTP_METHODS = %w[GET HEAD POST PUT PATCH DELETE OPTIONS].freeze
+  HTTP_METHODS_WITH_BODY = %w[POST PUT PATCH].freeze
+  MAX_TIMEOUT_SECONDS = 60
+  MAX_REDIRECTS_LIMIT = 20
+  # One "Name: value" per line; the name is an HTTP token (RFC 9110).
+  REQUEST_HEADER_LINE = /\A[!#$%&'*+.^_`|~0-9A-Za-z-]+:[^\r\n]*\z/
 
   belongs_to :group
   # delete_all: one DELETE statement instead of instantiating ~130k rows per busy host.
   has_many :probe_results, dependent: :delete_all
   has_many :speed_tests, dependent: :delete_all
   has_many :notification_deliveries, dependent: :nullify
+
+  # HTTP check credentials (see Setting for how keys are provisioned).
+  encrypts :request_headers
+  encrypts :request_body
+  encrypts :basic_auth_password
 
   enum :probe_type, {
     icmp: 0,
@@ -43,6 +54,12 @@ class Host < ApplicationRecord
   validates :expected_status_code, numericality: { only_integer: true, greater_than_or_equal_to: 100, less_than_or_equal_to: 599 }, if: :http?
   validates :expected_status_code_range, inclusion: { in: %w[exact 2xx 3xx 4xx 5xx] }, if: :http?
   validates :verify_ssl, inclusion: { in: [ true, false ] }, if: :http?
+  validates :timeout_seconds, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: MAX_TIMEOUT_SECONDS }
+  validate :timeout_must_be_shorter_than_interval
+  validates :http_method, inclusion: { in: HTTP_METHODS }, if: :http?
+  validates :max_redirects, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: MAX_REDIRECTS_LIMIT }, if: :http?
+  validates :ssl_expiry_warn_days, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 365 }, allow_nil: true, if: :http?
+  validate :http_options_must_be_consistent, if: :http?
 
   validate :address_must_be_valid_http_url, if: :http?
   validate :address_must_be_valid_network_target, unless: :http?
@@ -106,6 +123,23 @@ class Host < ApplicationRecord
     end
   end
 
+  # The keyword check passes when the keyword is found (or, inverted, when it isn't).
+  def keyword_matches?(body)
+    body.to_s.include?(keyword) != keyword_invert?
+  end
+
+  # request_headers as a hash; lines that don't parse are skipped (validation rejects them).
+  def parsed_request_headers
+    request_headers.to_s.lines.filter_map do |line|
+      name, value = line.strip.split(":", 2)
+      [ name.strip, value.to_s.strip ] if value && line.strip.match?(REQUEST_HEADER_LINE)
+    end.to_h
+  end
+
+  def ssl_expiring_soon?(now = Time.current)
+    ssl_expires_at.present? && ssl_expiry_warn_days.present? && ssl_expires_at <= now + ssl_expiry_warn_days.days
+  end
+
   def normalized_http_address
     value = address.to_s.strip
     return value if value.start_with?("http://", "https://")
@@ -159,6 +193,28 @@ class Host < ApplicationRecord
     end
   end
 
+  def timeout_must_be_shorter_than_interval
+    return if timeout_seconds.blank? || interval.blank? || icmp?
+    return if timeout_seconds.to_i < interval.to_i
+
+    errors.add(:timeout_seconds, "must be shorter than the interval")
+  end
+
+  def http_options_must_be_consistent
+    if keyword.present? && http_method == "HEAD"
+      errors.add(:keyword, "can't be checked with HEAD requests, which have no body")
+    end
+    if request_body.present? && !HTTP_METHODS_WITH_BODY.include?(http_method)
+      errors.add(:request_body, "is only sent with #{HTTP_METHODS_WITH_BODY.to_sentence(last_word_connector: ' or ')}")
+    end
+    if request_headers.present? && request_headers.lines.any? { |line| line.strip.present? && !line.strip.match?(REQUEST_HEADER_LINE) }
+      errors.add(:request_headers, "must be one \"Name: value\" per line")
+    end
+    if basic_auth_password.present? && basic_auth_user.blank?
+      errors.add(:basic_auth_user, "is required with a password")
+    end
+  end
+
   def address_must_be_valid_http_url
     uri = URI.parse(normalized_http_address)
     if uri.host.blank? || !%w[http https].include?(uri.scheme)
@@ -171,6 +227,7 @@ class Host < ApplicationRecord
   def normalize_probe_specific_fields
     self.address = address.strip if address.is_a?(String)
     self.latency_threshold_ms = DEFAULT_LATENCY_THRESHOLD_MS if latency_threshold_ms.blank?
+    self.timeout_seconds = 5 if timeout_seconds.blank?
 
     if tcp?
       self.expected_status_code_range = "exact" if expected_status_code_range.blank?
@@ -185,5 +242,13 @@ class Host < ApplicationRecord
     self.expected_status_code = 200 if expected_status_code.blank?
     self.expected_status_code_range = "exact" if expected_status_code_range.blank?
     self.verify_ssl = true if verify_ssl.nil?
+    self.http_method = http_method.to_s.strip.upcase.presence || "GET"
+    self.max_redirects = 0 if max_redirects.blank?
+    self.keyword = keyword.presence
+    self.request_headers = request_headers.presence&.strip
+    self.request_body = request_body.presence
+    self.basic_auth_user = basic_auth_user.to_s.strip.presence
+    # Clearing the username removes the stored password too (the form never shows it).
+    self.basic_auth_password = nil if basic_auth_user.nil?
   end
 end

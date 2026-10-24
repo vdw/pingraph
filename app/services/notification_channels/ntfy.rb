@@ -6,7 +6,7 @@ module NotificationChannels
     # ntfy priorities: 3 is default, 4 is high (long vibration and a pop-over on Android).
     PRIORITIES = { down: 4, degraded: 3, recovery: 3 }.freeze
     # ntfy shows these tags as emoji in front of the title.
-    TAGS = { down: "red_circle", degraded: "yellow_circle", recovery: "green_circle" }.freeze
+    TAGS = { down: "red_circle", degraded: "yellow_circle", recovery: "green_circle", cert_expiring: "warning" }.freeze
 
     def deliver(payload)
       server_url, topic = split_url(setting.ntfy_url)

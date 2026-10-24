@@ -24,7 +24,8 @@ class NotificationChannels::WebhookTest < ActiveSupport::TestCase
       "packet_loss" => nil,
       "latency_ms" => 812.5,
       "status_code" => 503,
-      "occurred_at" => "2026-10-24T12:00:00Z"
+      "occurred_at" => "2026-10-24T12:00:00Z",
+      "certificate_expires_at" => nil
     }, http.json)
   end
 

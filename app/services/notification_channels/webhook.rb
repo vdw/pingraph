@@ -24,7 +24,8 @@ module NotificationChannels
         "packet_loss" => payload.packet_loss,
         "latency_ms" => payload.latency,
         "status_code" => payload.status_code,
-        "occurred_at" => payload.occurred_at&.iso8601
+        "occurred_at" => payload.occurred_at&.iso8601,
+        "certificate_expires_at" => payload.certificate_expires_at&.iso8601
       }
     end
   end

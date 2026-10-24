@@ -18,16 +18,21 @@ class ProbeService
     :error_message,
     :metadata,
     :recorded_at,
+    :certificate_expires_at, # HTTPS only: the server certificate's not_after
     keyword_init: true
   )
 
   ICMP_PACKET_COUNT = 5
   ICMP_PACKET_TIMEOUT = 2
   ICMP_COMMAND_DEADLINE = ICMP_PACKET_COUNT * ICMP_PACKET_TIMEOUT
-  TCP_TIMEOUT = 5
-  HTTP_OPEN_TIMEOUT = 5
-  HTTP_READ_TIMEOUT = 5
   FAILURE_THRESHOLD = 2
+  # Keyword checks read at most this much of the body.
+  HTTP_BODY_LIMIT = 1.megabyte
+  HTTP_REQUEST_CLASSES = {
+    "GET" => Net::HTTP::Get, "HEAD" => Net::HTTP::Head, "POST" => Net::HTTP::Post, "PUT" => Net::HTTP::Put,
+    "PATCH" => Net::HTTP::Patch, "DELETE" => Net::HTTP::Delete, "OPTIONS" => Net::HTTP::Options
+  }.freeze
+  REDIRECT_CODES = [ 301, 302, 303, 307, 308 ].freeze
 
   # iputils: "rtt min/avg/max/mdev = 1/2/3/4 ms"; BSD/macOS: "round-trip min/avg/max/stddev";
   # BusyBox: "round-trip min/avg/max = 1/2/3 ms" (no jitter).
@@ -103,48 +108,140 @@ class ProbeService
     icmp_failure_result(e.message)
   end
 
+  # Follows up to host.max_redirects redirects and matches the final response against the
+  # expected status and keyword. The certificate expiry comes from the first request, the
+  # URL actually being monitored.
   def self.probe_http(host)
     start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     uri = URI.parse(host.normalized_http_address)
+    method = host.http_method.presence || "GET"
+    body = host.request_body
+    redirects = 0
+    certificate_expires_at = nil
 
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.open_timeout = HTTP_OPEN_TIMEOUT
-    http.read_timeout = HTTP_READ_TIMEOUT
-    http.use_ssl = uri.scheme == "https"
-    http.verify_mode = host.verify_ssl ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
+    loop do
+      response, response_body, certificate = http_request(host, uri, method, body, same_origin: redirects.zero?)
+      certificate_expires_at = certificate&.not_after if redirects.zero?
 
-    request = Net::HTTP::Get.new(uri.request_uri.presence || "/")
-    response = http.request(request)
+      location = response["location"] if REDIRECT_CODES.include?(response.code.to_i)
+      if location.present? && redirects < host.max_redirects.to_i
+        uri = redirect_uri(uri, location)
+        redirects += 1
+        # 301/302/303 turn into GET without a body, as browsers do; 307/308 repeat the request.
+        unless [ 307, 308 ].include?(response.code.to_i)
+          method = "GET"
+          body = nil
+        end
+        next
+      end
 
-    latency_ms = elapsed_ms(start)
-    status_code = response.code.to_i
-    success = host.http_status_matches?(status_code)
-
-    # Latency only describes successful checks; for failures the elapsed time goes to
-    # metadata so charts and averages are not skewed by timeouts or instant refusals.
-    Result.new(
-      probe_type: :http,
-      success: success,
-      latency: success ? latency_ms : nil,
-      status_code: status_code,
-      error_message: success ? nil : "Unexpected HTTP status #{status_code}",
-      metadata: success ? { "message" => response.message } : { "message" => response.message, "elapsed_ms" => latency_ms },
-      recorded_at: Time.current
-    )
+      return http_result(host, response, response_body, start, redirects, certificate_expires_at,
+        too_many_redirects: location.present? && host.max_redirects.to_i.positive?)
+    end
   rescue => e
     Result.new(
       probe_type: :http,
       success: false,
-      error_message: e.message,
+      error_message: e.is_a?(Timeout::Error) ? "Timed out after #{host.timeout_seconds} seconds" : e.message,
       metadata: { "error_class" => e.class.name, "elapsed_ms" => start && elapsed_ms(start) }.compact,
       recorded_at: Time.current
     )
   end
 
+  # One request. Returns [response, body (only read for keyword checks, up to
+  # HTTP_BODY_LIMIT), peer certificate]. Custom headers and credentials are sent to the
+  # monitored URL's origin only, never to a host a redirect points at.
+  def self.http_request(host, uri, method, body, same_origin:)
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.open_timeout = host.timeout_seconds
+    http.read_timeout = host.timeout_seconds
+    http.write_timeout = host.timeout_seconds
+    # Net::HTTP silently retries idempotent requests once, doubling the timeout.
+    http.max_retries = 0
+    http.use_ssl = uri.scheme == "https"
+    http.verify_mode = host.verify_ssl ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
+
+    request = HTTP_REQUEST_CLASSES.fetch(method).new(uri.request_uri.presence || "/", "User-Agent" => "Pingraph")
+    if body.present?
+      request.body = body
+      request["Content-Type"] = json?(body) ? "application/json" : "text/plain"
+    end
+    if same_origin
+      request.basic_auth(host.basic_auth_user, host.basic_auth_password.to_s) if host.basic_auth_user.present?
+      host.parsed_request_headers.each { |name, value| request[name] = value }
+    end
+
+    http.start do |connection|
+      certificate = connection.peer_cert if uri.scheme == "https"
+      response = nil
+      response_body = String.new
+
+      catch(:body_limit_reached) do
+        connection.request(request) do |res|
+          response = res
+          next if host.keyword.blank?
+
+          res.read_body do |chunk|
+            response_body << chunk
+            # Stops reading; leaving start's block closes the connection.
+            throw :body_limit_reached if response_body.bytesize >= HTTP_BODY_LIMIT
+          end
+        end
+      end
+
+      [ response, response_body.byteslice(0, HTTP_BODY_LIMIT).force_encoding(Encoding::UTF_8), certificate ]
+    end
+  end
+
+  def self.http_result(host, response, response_body, start, redirects, certificate_expires_at, too_many_redirects:)
+    latency_ms = elapsed_ms(start)
+    status_code = response.code.to_i
+    error_message =
+      if too_many_redirects
+        "Too many redirects (more than #{host.max_redirects})"
+      elsif !host.http_status_matches?(status_code)
+        "Unexpected HTTP status #{status_code}"
+      elsif host.keyword.present? && !host.keyword_matches?(response_body)
+        host.keyword_invert? ? "Keyword \"#{host.keyword}\" was found" : "Keyword \"#{host.keyword}\" not found"
+      end
+    success = error_message.nil?
+
+    metadata = { "message" => response.message }
+    metadata["redirects"] = redirects if redirects.positive?
+    # Latency only describes successful checks; for failures the elapsed time goes to
+    # metadata so charts and averages are not skewed by timeouts or instant refusals.
+    metadata["elapsed_ms"] = latency_ms unless success
+
+    Result.new(
+      probe_type: :http,
+      success: success,
+      latency: success ? latency_ms : nil,
+      status_code: status_code,
+      error_message: error_message,
+      metadata: metadata,
+      recorded_at: Time.current,
+      certificate_expires_at: certificate_expires_at
+    )
+  end
+
+  def self.redirect_uri(base, location)
+    uri = base.merge(location)
+    raise ArgumentError, "Redirect to unsupported URL #{location.truncate(100)}" unless uri.is_a?(URI::HTTP) && uri.host.present?
+
+    uri
+  end
+
+  def self.json?(body)
+    JSON.parse(body)
+    true
+  rescue JSON::ParserError
+    false
+  end
+
   def self.probe_tcp(host)
     start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
-    Socket.tcp(host.address, host.port, connect_timeout: TCP_TIMEOUT) do |socket|
+    Socket.tcp(host.address, host.port, connect_timeout: host.timeout_seconds) do |socket|
       socket.close
     end
 
@@ -223,6 +320,10 @@ class ProbeService
 
       alert = AlertEvaluator.evaluate(host, result, computed_status)
       deliveries = NotificationDelivery.create_for!(alert) if alert
+
+      # Separate from the up/down state machine: a check can pass with an expiring certificate.
+      expiry_alert = CertificateExpiryAlert.evaluate(host, result, computed_status)
+      deliveries += NotificationDelivery.create_for!(expiry_alert) if expiry_alert
     end
 
     deliveries
@@ -255,5 +356,5 @@ class ProbeService
   def self.elapsed_ms(start)
     ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - start) * 1000.0).round(2)
   end
-  private_class_method :persist_result!, :enqueue_notifications, :icmp_failure_result, :ping_error_message, :elapsed_ms
+  private_class_method :http_request, :http_result, :redirect_uri, :json?, :persist_result!, :enqueue_notifications, :icmp_failure_result, :ping_error_message, :elapsed_ms
 end

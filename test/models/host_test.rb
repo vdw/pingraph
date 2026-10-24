@@ -152,4 +152,52 @@ class HostTest < ActiveSupport::TestCase
       assert_not host.stale?, "a slow host is only stale after three of its own intervals"
     end
   end
+
+  test "http options are validated" do
+    host = Host.new(group: groups(:one), name: "Web", probe_type: :http, address: "https://web.test", interval: 30)
+    assert host.valid?, host.errors.full_messages.to_sentence
+    assert_equal "GET", host.http_method
+    assert_equal 10, host.max_redirects, "new hosts follow redirects"
+
+    host.assign_attributes(http_method: "TRACE", max_redirects: 50, timeout_seconds: 30, ssl_expiry_warn_days: 0)
+    assert_not host.valid?
+    assert host.errors[:http_method].any?
+    assert host.errors[:max_redirects].any?
+    assert_includes host.errors[:timeout_seconds], "must be shorter than the interval"
+    assert host.errors[:ssl_expiry_warn_days].any?
+
+    host.assign_attributes(http_method: "head", max_redirects: 5, timeout_seconds: 10, ssl_expiry_warn_days: nil, keyword: "ok", request_body: "x")
+    assert_not host.valid?
+    assert_equal "HEAD", host.http_method
+    assert host.errors[:keyword].any?
+    assert host.errors[:request_body].any?
+
+    host.assign_attributes(http_method: "POST", request_headers: "X-Token: 1\nnot a header")
+    assert_not host.valid?
+    assert host.errors[:request_headers].any?
+
+    host.request_headers = "X-Token: 1\r\n\nAccept: text/html"
+    assert host.valid?, host.errors.full_messages.to_sentence
+    assert_equal({ "X-Token" => "1", "Accept" => "text/html" }, host.parsed_request_headers)
+  end
+
+  test "clearing the basic auth user clears the password" do
+    host = Host.create!(group: groups(:one), name: "Web", probe_type: :http, address: "https://web.test",
+      basic_auth_user: "admin", basic_auth_password: "s3cret")
+    raw = Host.connection.select_value("SELECT basic_auth_password FROM hosts WHERE id = #{host.id}")
+    assert_not_includes raw, "s3cret", "stored encrypted"
+
+    host.update!(basic_auth_user: "")
+    assert_nil host.reload.basic_auth_password
+  end
+
+  test "keyword_matches? honors keyword_invert" do
+    host = Host.new(keyword: "OK")
+    assert host.keyword_matches?("status: OK")
+    assert_not host.keyword_matches?("status: down")
+
+    host.keyword_invert = true
+    assert_not host.keyword_matches?("status: OK")
+    assert host.keyword_matches?("status: down")
+  end
 end

@@ -14,6 +14,9 @@ Latency:      <%= @payload.latency.round(1) %> ms
 <% if @payload.status_code.present? -%>
 HTTP status:  <%= @payload.status_code %>
 <% end -%>
+<% if @payload.certificate_expires_at.present? -%>
+Certificate expires: <%= @payload.certificate_expires_at.in_time_zone.to_fs(:long) %>
+<% end -%>
 <% if @payload.host_url.present? -%>
 
 View host: <%= @payload.host_url %>

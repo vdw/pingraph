@@ -3,6 +3,7 @@
            when :down then "#dc2626"
            when :degraded then "#d97706"
            when :recovery then "#16a34a"
+           when :cert_expiring then "#d97706"
            else "#6b7280"
            end
 %>
@@ -44,6 +45,12 @@
       <tr>
         <td style="color: #6b7280; padding-right: 16px; vertical-align: top;">HTTP status</td>
         <td><%= @payload.status_code %></td>
+      </tr>
+    <% end %>
+    <% if @payload.certificate_expires_at.present? %>
+      <tr>
+        <td style="color: #6b7280; padding-right: 16px; vertical-align: top;">Certificate expires</td>
+        <td><%= @payload.certificate_expires_at.in_time_zone.to_fs(:long) %></td>
       </tr>
     <% end %>
   </table>

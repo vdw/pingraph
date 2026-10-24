@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["probeType", "tcpFields", "httpFields", "statusRange", "expectedCodeField"]
+  static targets = ["probeType", "tcpFields", "httpFields", "timeoutFields", "statusRange", "expectedCodeField"]
 
   connect() {
     this.update()
@@ -12,6 +12,7 @@ export default class extends Controller {
 
     this.toggle(this.tcpFieldsTarget, probeType === "tcp")
     this.toggle(this.httpFieldsTarget, probeType === "http")
+    this.toggle(this.timeoutFieldsTarget, probeType === "http" || probeType === "tcp")
     this.toggleExpectedCode()
   }
 

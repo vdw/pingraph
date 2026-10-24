@@ -1,3 +1,14 @@
+<%
+  # Classes for the HTTP option fields below.
+  field_class = ->(attribute, extra = nil) do
+    [ "block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500",
+      "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500", extra,
+      host.errors[attribute].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600" ]
+  end
+  label_class = "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+  hint_class = "mt-1 text-xs text-gray-400 dark:text-gray-500"
+  checkbox_class = "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+%>
 <%= form_with(model: host, data: { controller: "probe-type-fields" }) do |form| %>
   <% if host.errors.any? %>
     <div class="mb-5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3">
@@ -93,12 +104,83 @@
                       host.errors[:expected_status_code].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
       </div>
 
+      <div>
+        <%= form.label :keyword, "Keyword", class: label_class %>
+        <%= form.text_field :keyword, placeholder: "e.g. All systems operational", class: field_class.(:keyword) %>
+        <label class="mt-2 inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <%= form.check_box :keyword_invert, class: checkbox_class %>
+          Fail when the keyword is found
+        </label>
+        <p class="<%= hint_class %>">Optional. Case-sensitive; checks the first 1 MB of the response.</p>
+      </div>
+
       <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
         <%= form.check_box :verify_ssl,
               class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" %>
         Verify SSL certificate
       </label>
       <p class="text-xs text-gray-400 dark:text-gray-500">Disable only for self-signed/internal certificates.</p>
+
+      <div>
+        <%= form.label :ssl_expiry_warn_days, "Warn before the certificate expires", class: label_class %>
+        <div class="relative">
+          <%= form.number_field :ssl_expiry_warn_days, min: 1, max: 365, placeholder: "Off", class: field_class.(:ssl_expiry_warn_days, "pr-12") %>
+          <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-400 dark:text-gray-500">days</span>
+        </div>
+        <p class="<%= hint_class %>">HTTPS only. One alert per certificate; leave blank to turn off.</p>
+      </div>
+
+      <details class="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3" <%= "open" if (host.errors.attribute_names & %i[http_method max_redirects request_headers request_body basic_auth_user]).any? %>>
+        <summary class="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300">Request options</summary>
+
+        <div class="mt-4 space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <%= form.label :http_method, "Method", class: label_class %>
+              <%= form.select :http_method, Host::HTTP_METHODS, {}, class: field_class.(:http_method) %>
+            </div>
+            <div>
+              <%= form.label :max_redirects, "Follow redirects", class: label_class %>
+              <%= form.number_field :max_redirects, min: 0, max: Host::MAX_REDIRECTS_LIMIT, class: field_class.(:max_redirects) %>
+              <p class="<%= hint_class %>">Maximum hops; 0 checks the redirect itself.</p>
+            </div>
+          </div>
+
+          <div>
+            <%= form.label :request_headers, "Headers", class: label_class %>
+            <%= form.text_area :request_headers, rows: 3, placeholder: "Authorization: Bearer …\nAccept: application/json", class: field_class.(:request_headers, "font-mono") %>
+            <p class="<%= hint_class %>">One "Name: value" per line. Not sent to other hosts a redirect points to.</p>
+          </div>
+
+          <div>
+            <%= form.label :request_body, "Body", class: label_class %>
+            <%= form.text_area :request_body, rows: 3, placeholder: "{\"ping\": true}", class: field_class.(:request_body, "font-mono") %>
+            <p class="<%= hint_class %>">POST, PUT and PATCH only. Sent as JSON when it parses as JSON, otherwise as plain text; set a Content-Type header to override.</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <%= form.label :basic_auth_user, "Basic auth username", class: label_class %>
+              <%= form.text_field :basic_auth_user, autocomplete: "off", class: field_class.(:basic_auth_user) %>
+            </div>
+            <div>
+              <%= form.label :basic_auth_password, "Password", class: label_class %>
+              <%= form.password_field :basic_auth_password, autocomplete: "new-password",
+                    placeholder: host.basic_auth_password.present? ? "•••••••• (unchanged)" : nil,
+                    class: field_class.(:basic_auth_password) %>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div data-probe-type-fields-target="timeoutFields" class="hidden">
+      <%= form.label :timeout_seconds, "Timeout", class: label_class %>
+      <div class="relative">
+        <%= form.number_field :timeout_seconds, min: 1, max: Host::MAX_TIMEOUT_SECONDS, class: field_class.(:timeout_seconds, "pr-16") %>
+        <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-400 dark:text-gray-500">seconds</span>
+      </div>
+      <p class="<%= hint_class %>">How long to wait for a connection or response before the check fails. Must be shorter than the interval.</p>
     </div>
 
     <div>

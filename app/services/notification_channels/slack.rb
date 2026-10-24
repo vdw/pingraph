@@ -1,6 +1,6 @@
 module NotificationChannels
   class Slack < Base
-    COLORS = { down: "#dc2626", degraded: "#d97706", recovery: "#16a34a" }.freeze
+    COLORS = { down: "#dc2626", degraded: "#d97706", recovery: "#16a34a", cert_expiring: "#d97706" }.freeze
     DEFAULT_COLOR = "#6b7280".freeze
 
     def deliver(payload)

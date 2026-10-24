@@ -14,7 +14,7 @@ Monitor latency trends, packet loss, and service availability in real-time with 
 
 ### Multi-Protocol Monitoring
 - **ICMP (Ping)** — Classic latency and packet loss monitoring
-- **HTTP** — Web service health checks with custom status codes and SSL verification
+- **HTTP** — Web service checks: expected status, keyword (or keyword must be absent), redirects, any method with headers, body and basic auth, configurable timeout, and certificate expiry warnings
 - **TCP** — Port availability and connectivity checks
 
 ### Dashboards & Visualization
@@ -137,11 +137,12 @@ Any combination of channels can be active at the same time. Click **Send test no
   "packet_loss": 100,
   "latency_ms": null,
   "status_code": null,
-  "occurred_at": "2026-10-24T12:00:00Z"
+  "occurred_at": "2026-10-24T12:00:00Z",
+  "certificate_expires_at": null
 }
 ```
 
-`event` is `down`, `degraded` or `recovery`; `status` is the new state (`down`, `degraded` or `up`). Fields that don't apply to the check are `null`. Any 2xx response counts as delivered.
+`event` is `down`, `degraded`, `recovery` or `cert_expiring`; `status` is the new state (`down`, `degraded` or `up`), or the current one for `cert_expiring`, which also sets `certificate_expires_at`. Fields that don't apply to the check are `null`. Any 2xx response counts as delivered.
 
 **Delivery is retried.** Each alert is sent to each channel separately. If a channel fails, that channel is retried up to 5 times over about 6 minutes, without re-sending to channels that already worked. Every alert and its result is listed in the **Notification log** (linked from Settings). If an alert still can't be delivered, a red banner appears on every page until a later one succeeds, and you can retry it from the log.
 
@@ -152,13 +153,17 @@ Any combination of channels can be active at the same time. Click **Send test no
 
 Toggle alerting per host with **Send notifications for this host** on the host's edit page (on by default once a channel is configured).
 
-**Security:** webhook URLs, ntfy topics and tokens, the Telegram bot token and SMTP passwords are encrypted at rest. The encryption key is generated automatically on first boot and stored in `storage/` — keep that volume persistent (it already holds your database). To manage keys yourself, set the `ACTIVE_RECORD_ENCRYPTION_*` environment variables instead.
+**Security:** webhook URLs, ntfy topics and tokens, the Telegram bot token, SMTP passwords, and HTTP check headers, bodies and basic auth passwords are encrypted at rest. The encryption key is generated automatically on first boot and stored in `storage/` — keep that volume persistent (it already holds your database). To manage keys yourself, set the `ACTIVE_RECORD_ENCRYPTION_*` environment variables instead.
 
 ---
 
 ## How It Works
 
 **Polling:** Every minute, Pingraph schedules each host's checks for the coming minute on exact slots, so a host set to 30 seconds is checked every 30 seconds (minimum 10 seconds). If the queue falls behind, late checks are skipped rather than piling up.
+
+**HTTP checks:** A check passes when the final response (after following up to 10 redirects; set 0 to check the redirect itself) has the expected status and, if set, contains the keyword (or doesn't, when inverted). The keyword is case-sensitive and matched against the first 1 MB of the body. Custom headers and basic auth are sent only to the monitored URL's host, never to a host a redirect points to. The timeout (default 5 seconds) applies to connecting and to each read, and also to TCP checks. Hosts created before redirects were supported keep not following them until you change it.
+
+**Certificate expiry:** HTTPS checks record when the server's certificate expires; the host page shows it. When it is within the host's warning window (default 14 days, blank to turn off), each notification channel gets one *certificate expires in N days* alert. A renewed certificate starts over. With *Verify SSL certificate* on, an expired certificate also fails the check.
 
 **Latency & Loss:** Probes capture min/average/max latency, jitter (ICMP) and packet loss percentage. Failed checks have no latency, so timeouts don't show up as spikes on the chart.
 

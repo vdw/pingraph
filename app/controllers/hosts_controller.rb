@@ -76,7 +76,7 @@ class HostsController < ApplicationController
   # PATCH/PUT /hosts/1 or /hosts/1.json
   def update
     respond_to do |format|
-      if @host.update(host_params)
+      if @host.update(update_params)
         format.html { redirect_to @host, notice: "Host was successfully updated.", status: :see_other }
         format.json { render :show, status: :ok, location: @host }
       else
@@ -176,6 +176,13 @@ class HostsController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def host_params
-      params.expect(host: [ :name, :address, :interval, :group_id, :probe_type, :port, :expected_status_code, :expected_status_code_range, :verify_ssl, :latency_threshold_ms, :notifications_enabled, :notify_on_degraded ])
+      params.expect(host: [ :name, :address, :interval, :group_id, :probe_type, :port, :expected_status_code, :expected_status_code_range, :verify_ssl, :latency_threshold_ms, :notifications_enabled, :notify_on_degraded,
+        :timeout_seconds, :http_method, :max_redirects, :keyword, :keyword_invert, :request_headers, :request_body,
+        :basic_auth_user, :basic_auth_password, :ssl_expiry_warn_days ])
+    end
+
+    # The password field renders blank; a blank submission keeps the stored password.
+    def update_params
+      host_params.tap { |attrs| attrs.delete(:basic_auth_password) if attrs[:basic_auth_password].blank? }
     end
 end

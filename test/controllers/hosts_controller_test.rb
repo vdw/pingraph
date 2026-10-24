@@ -40,6 +40,33 @@ class HostsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to host_url(@host)
   end
 
+  test "creates an http host with request options and keeps its password on a blank update" do
+    assert_difference("Host.count") do
+      post hosts_url, params: { host: {
+        name: "API", address: "https://api.test/health", group_id: @host.group_id, interval: 60, probe_type: "http",
+        http_method: "POST", request_body: "{}", request_headers: "X-Key: 1", keyword: "ok", max_redirects: 3,
+        timeout_seconds: 15, basic_auth_user: "admin", basic_auth_password: "s3cret", ssl_expiry_warn_days: ""
+      } }
+    end
+
+    host = Host.order(:id).last
+    assert_equal [ "POST", 3, 15, "ok", nil ], [ host.http_method, host.max_redirects, host.timeout_seconds, host.keyword, host.ssl_expiry_warn_days ]
+
+    patch host_url(host), params: { host: { name: "API v2", basic_auth_user: "admin", basic_auth_password: "" } }
+    assert_redirected_to host_url(host)
+    assert_equal "s3cret", host.reload.basic_auth_password
+
+    host.update_columns(ssl_expires_at: 5.days.from_now)
+    get host_url(host)
+    assert_response :success
+    assert_match "Certificate expires", response.body
+
+    get edit_host_url(host)
+    assert_response :success
+    assert_select "textarea[name='host[request_headers]']", text: "X-Key: 1"
+    assert_select "input[name='host[basic_auth_password]'][value]", count: 0
+  end
+
   test "should destroy host" do
     assert_difference("Host.count", -1) do
       delete host_url(@host)

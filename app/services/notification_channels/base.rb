@@ -55,6 +55,7 @@ module NotificationChannels
       when :down then "🔴"
       when :degraded then "🟡"
       when :recovery then "🟢"
+      when :cert_expiring then "⚠️"
       else "⚪"
       end
     end
@@ -68,7 +69,12 @@ module NotificationChannels
       lines << [ "Packet loss", "#{payload.packet_loss}%" ] if payload.packet_loss.to_i.positive?
       lines << [ "Latency", "#{payload.latency.round(1)} ms" ] if payload.latency.present?
       lines << [ "HTTP status", payload.status_code ] if payload.status_code.present?
+      lines << [ "Certificate expires", certificate_expiry(payload) ] if payload.certificate_expires_at.present?
       lines
+    end
+
+    def certificate_expiry(payload)
+      payload.certificate_expires_at.in_time_zone.to_fs(:long)
     end
   end
 end

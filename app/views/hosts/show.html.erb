@@ -24,7 +24,18 @@
         </span>
       </div>
       <p class="text-sm text-gray-500 dark:text-gray-400 font-mono pl-6"><%= @host.address %></p>
-      <p class="text-xs text-gray-400 dark:text-gray-500 pl-6 mt-0.5">Polled every <%= @host.interval %> seconds</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 pl-6 mt-0.5">
+        Polled every <%= @host.interval %> seconds
+        <% if @host.http? %>
+          · <%= @host.http_method %><%= " · keyword #{@host.keyword_invert? ? 'must not appear' : 'must appear'}" if @host.keyword.present? %>
+        <% end %>
+      </p>
+      <% if @host.http? && @host.ssl_expires_at.present? %>
+        <p class="text-xs pl-6 mt-0.5 <%= @host.ssl_expiring_soon? ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-400 dark:text-gray-500' %>">
+          Certificate <%= @host.ssl_expires_at.past? ? "expired" : "expires" %> <%= local_time(@host.ssl_expires_at, format: :short) %>
+          (<%= @host.ssl_expires_at.past? ? "#{time_ago_in_words(@host.ssl_expires_at)} ago" : "in #{distance_of_time_in_words_to_now(@host.ssl_expires_at)}" %>)
+        </p>
+      <% end %>
     </div>
     <div class="flex gap-2">
       <%= link_to "Edit", edit_host_path(@host),
@@ -90,6 +101,9 @@
                 <% elsif probe_result.http? %>
                   <span class="text-sm text-gray-500 dark:text-gray-400">
                     <%= probe_result.success? ? "HTTP #{probe_result.status_code}" : (probe_result.error_message.presence || "HTTP failed") %>
+                    <% if (redirects = probe_result.parsed_metadata["redirects"].to_i).positive? %>
+                      <span class="text-xs text-gray-400 dark:text-gray-500">after <%= pluralize(redirects, "redirect") %></span>
+                    <% end %>
                   </span>
                 <% else %>
                   <span class="text-sm text-gray-500 dark:text-gray-400">

@@ -10,6 +10,13 @@ class ProbeResult < ApplicationRecord
   validates :recorded_at, presence: true
   validates :packet_loss, presence: true, if: :icmp?
 
+  # metadata is stored as a JSON string (see ProbeService.persist_result!).
+  def parsed_metadata
+    metadata.present? ? JSON.parse(metadata) : {}
+  rescue JSON::ParserError
+    {}
+  end
+
   scope :downsampled_for_range, ->(start_time, interval_minutes) do
     interval_seconds = interval_minutes.to_i * 60
     bucket_epoch_sql = "(CAST(strftime('%s', recorded_at) AS INTEGER) / #{interval_seconds}) * #{interval_seconds}"

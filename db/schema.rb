@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_24_120010) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_120011) do
   create_table "groups", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -23,24 +23,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_120010) do
 
   create_table "hosts", force: :cascade do |t|
     t.string "address"
+    t.text "basic_auth_password"
+    t.string "basic_auth_user"
     t.integer "consecutive_failures", default: 0, null: false
     t.integer "consecutive_issues", default: 0, null: false
     t.datetime "created_at", null: false
     t.integer "expected_status_code", default: 200, null: false
     t.string "expected_status_code_range", default: "exact", null: false
     t.integer "group_id", null: false
+    t.string "http_method", default: "GET", null: false
     t.integer "interval", default: 60, null: false
+    t.string "keyword"
+    t.boolean "keyword_invert", default: false, null: false
     t.string "last_error_message"
     t.integer "last_notified_status", default: 0, null: false
     t.datetime "last_probed_at"
     t.float "latency_threshold_ms", default: 350.0, null: false
+    t.integer "max_redirects", default: 10, null: false
     t.string "name"
     t.datetime "next_probe_at"
     t.boolean "notifications_enabled", default: true, null: false
     t.boolean "notify_on_degraded", default: false, null: false
     t.integer "port"
     t.integer "probe_type", default: 0, null: false
+    t.text "request_body"
+    t.text "request_headers"
+    t.datetime "ssl_expires_at"
+    t.datetime "ssl_expiry_notified_for"
+    t.integer "ssl_expiry_warn_days", default: 14
     t.integer "status", default: 0, null: false
+    t.integer "timeout_seconds", default: 5, null: false
     t.datetime "updated_at", null: false
     t.boolean "verify_ssl", default: true, null: false
     t.index ["group_id", "address", "probe_type", "port"], name: "index_hosts_unique_tcp", unique: true, where: "probe_type = 2"
