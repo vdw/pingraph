@@ -40,3 +40,7 @@
 # VS Code Copilot skill files
 .github/skills/
 local/
+
+# Local-only markdown in the repo root, except the README
+/*.md
+!/README.md
