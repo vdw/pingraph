@@ -32,34 +32,15 @@ Rails.application.configure do
     end
   end
 
-  if keys_missing.call
-    path = Rails.root.join("storage", "encryption.key")
-
-    keys =
-      if path.exist?
-        YAML.safe_load(path.read, symbolize_names: true)
-      else
-        generated = {
-          "primary_key" => SecureRandom.alphanumeric(32),
-          "deterministic_key" => SecureRandom.alphanumeric(32),
-          "key_derivation_salt" => SecureRandom.alphanumeric(32)
-        }
-        path.dirname.mkpath
-        # Write to a per-process temp file then hard-link into place. link(2) is atomic and
-        # fails if the target exists, so concurrently-booting processes can't clobber each
-        # other's keys — the loser just reads the winner's file below.
-        tmp = path.dirname.join("encryption.key.#{Process.pid}.tmp")
-        tmp.write(generated.to_yaml)
-        tmp.chmod(0o600)
-        begin
-          File.link(tmp.to_s, path.to_s)
-        rescue Errno::EEXIST
-          # Another process won the race; use its key file.
-        ensure
-          tmp.delete if tmp.exist?
-        end
-        YAML.safe_load(path.read, symbolize_names: true)
-      end
+  if keys_missing.call && !StorageSecret.build_time?
+    yaml = StorageSecret.fetch(Rails.root.join("storage", "encryption.key")) do
+      {
+        "primary_key" => SecureRandom.alphanumeric(32),
+        "deterministic_key" => SecureRandom.alphanumeric(32),
+        "key_derivation_salt" => SecureRandom.alphanumeric(32)
+      }.to_yaml
+    end
+    keys = YAML.safe_load(yaml, symbolize_names: true)
 
     enc.primary_key         ||= keys[:primary_key]
     enc.deterministic_key   ||= keys[:deterministic_key]

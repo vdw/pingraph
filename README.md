@@ -55,7 +55,6 @@ docker run -d \
   --name pingraph \
   -p 3000:80 \
   --cap-add=NET_RAW \
-  -e RAILS_MASTER_KEY="$(openssl rand -base64 32)" \
   -e SOLID_QUEUE_IN_PUMA=true \
   -v pingraph_storage:/rails/storage \
   ghcr.io/vdw/pingraph:latest
@@ -66,6 +65,9 @@ Open [http://localhost:3000](http://localhost:3000) and sign in with:
 - **Password:** `pingraph123`
 
 > **Important:** Change credentials after first login!
+
+No master key is needed: the session secret and the encryption key are generated on first boot
+and kept in the `pingraph_storage` volume, next to the database. Keep that volume persistent.
 
 ### Manual Setup (Development)
 
@@ -87,7 +89,7 @@ Then open [http://localhost:3000](http://localhost:3000)
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `RAILS_MASTER_KEY` | — | **Required.** Encryption key for credentials. Generate with: `openssl rand -base64 32` |
+| `SECRET_KEY_BASE` | auto-generated | *Optional.* Signs session cookies. If unset, one is generated on first boot and stored in `storage/secret_key_base`. |
 | `TIME_ZONE` | `UTC` | Set dashboard timezone (e.g., `Eastern Time (US & Canada)`, `Europe/London`, `Asia/Tokyo`) |
 | `SOLID_QUEUE_IN_PUMA=true` | — | For single-container deployments (runs scheduler + worker together) |
 | `JOB_THREADS` | `5` | Threads for the probe worker. Probes mostly wait on the network, so raise this if you monitor many hosts. Alerts always have their own worker. |
@@ -156,14 +158,12 @@ Toggle alerting per host with **Send notifications for this host** on the host's
 ### Docker Compose Example
 
 ```yaml
-version: '3.8'
 services:
   pingraph:
     image: ghcr.io/vdw/pingraph:latest
     ports:
       - "3000:80"
     environment:
-      RAILS_MASTER_KEY: "${RAILS_MASTER_KEY}"
       TIME_ZONE: "UTC"
       SOLID_QUEUE_IN_PUMA: "true"
     volumes:
@@ -178,8 +178,7 @@ volumes:
 
 Deploy with:
 ```bash
-export RAILS_MASTER_KEY=$(openssl rand -base64 32)
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Systemd Service
@@ -196,7 +195,7 @@ User=pingraph
 WorkingDirectory=/opt/pingraph
 ExecStart=/opt/pingraph/bin/rails server -p 3000
 Environment="RAILS_ENV=production"
-Environment="RAILS_MASTER_KEY=<your-key>"
+Environment="SOLID_QUEUE_IN_PUMA=true"
 Restart=on-failure
 
 [Install]
@@ -206,7 +205,7 @@ WantedBy=multi-user.target
 ### Production Checklist
 
 - [ ] Change default admin credentials
-- [ ] Generate new `RAILS_MASTER_KEY` (never use the example)
+- [ ] Keep `storage/` persistent and back it up: it holds the database and the generated keys
 - [ ] Configure TIME_ZONE for your location
 - [ ] Set up persistent volume or backup strategy for database
 - [ ] Use reverse proxy (nginx/HAProxy) with HTTPS

@@ -366,9 +366,9 @@
         </div>
         <h3 class="font-semibold text-sm mb-2" style="letter-spacing:-0.01em;">Docker Ready</h3>
         <p class="text-sm leading-relaxed" style="color:var(--muted);line-height:1.65;">
-          Single container with a pre-built image. Configure <code style="font-family:'Fira Code',monospace;color:var(--cyan);font-size:0.8em;">RAILS_MASTER_KEY</code>,
+          Single container with a pre-built image. Set
           <code style="font-family:'Fira Code',monospace;color:var(--cyan);font-size:0.8em;">SOLID_QUEUE_IN_PUMA=true</code>,
-          <code style="font-family:'Fira Code',monospace;color:var(--cyan);font-size:0.8em;">NET_RAW</code>, and a storage volume.
+          <code style="font-family:'Fira Code',monospace;color:var(--cyan);font-size:0.8em;">NET_RAW</code>, and a storage volume. Keys are generated on first boot.
         </p>
       </div>
 
@@ -425,7 +425,6 @@
           <p style="padding-left:1.5rem;"><span class="cmd">  --name <span class="flag">pingraph</span> \</span></p>
           <p style="padding-left:1.5rem;"><span class="cmd">  --cap-add <span class="flag">NET_RAW</span> \</span></p>
           <p style="padding-left:1.5rem;"><span class="cmd">  -p <span class="flag">3000:80</span> \</span></p>
-          <p style="padding-left:1.5rem;"><span class="cmd">  -e <span class="flag">RAILS_MASTER_KEY=&quot;&lt;your master key&gt;&quot;</span> \</span></p>
           <p style="padding-left:1.5rem;"><span class="cmd">  -e <span class="flag">SOLID_QUEUE_IN_PUMA=true</span> \</span></p>
           <p style="padding-left:1.5rem;"><span class="cmd">  -v <span class="flag">pingraph_storage:/rails/storage</span> \</span></p>
           <p style="padding-left:1.5rem;"><span class="cmd">  ghcr.io/vdw/pingraph:latest</span></p>
@@ -435,8 +434,7 @@
 
       <!-- Tip -->
       <p class="mt-5 text-xs text-center" style="color:var(--muted);">
-        Requires <code style="font-family:'Fira Code',monospace;color:var(--cyan);">RAILS_MASTER_KEY</code>,
-        <code style="font-family:'Fira Code',monospace;color:var(--cyan);">SOLID_QUEUE_IN_PUMA=true</code>, and
+        Requires <code style="font-family:'Fira Code',monospace;color:var(--cyan);">SOLID_QUEUE_IN_PUMA=true</code>, a persistent storage volume, and
         <code style="font-family:'Fira Code',monospace;color:var(--cyan);">NET_RAW</code> capability to send ICMP packets.
         See the <a href="https://github.com/vdw/pingraph#docker" class="footer-link" style="text-decoration:underline;text-underline-offset:3px;">Docker docs</a> for compose examples.
       </p>

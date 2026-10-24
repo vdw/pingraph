@@ -6,6 +6,13 @@ Rails.application.configure do
   # Code is not reloaded between requests.
   config.enable_reloading = false
 
+  # The Docker image ships without credentials, so unless SECRET_KEY_BASE is set the secret
+  # is generated on first boot and kept in storage/ (the persistent volume), like the
+  # encryption key. Set in config so `docker exec ... bin/rails` tasks get it too.
+  if ENV["SECRET_KEY_BASE"].blank? && !StorageSecret.build_time? && Rails.application.credentials.secret_key_base.blank?
+    config.secret_key_base = StorageSecret.fetch(Rails.root.join("storage", "secret_key_base")) { SecureRandom.hex(64) }
+  end
+
   # Eager load code on boot for better performance and memory savings (ignored by Rake tasks).
   config.eager_load = true
 

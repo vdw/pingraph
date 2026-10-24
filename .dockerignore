@@ -14,6 +14,11 @@
 /config/master.key
 /config/credentials/*.key
 
+# The image can't decrypt the author's credentials, so don't ship them: the secret key base
+# comes from SECRET_KEY_BASE or is generated into storage/ (config/environments/production.rb).
+/config/credentials.yml.enc
+/config/credentials/*.yml.enc
+
 # Ignore all logfiles and tempfiles.
 /log/*
 /tmp/*

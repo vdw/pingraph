@@ -3,7 +3,8 @@
 
 # This Dockerfile is designed for production, not development. Use with Kamal or build'n'run by hand:
 # docker build -t pingraph .
-# docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value from config/master.key> --name pingraph pingraph
+# docker run -d -p 80:80 --cap-add=NET_RAW -e SOLID_QUEUE_IN_PUMA=true -v pingraph_storage:/rails/storage --name pingraph pingraph
+# No master key is needed: secrets are generated on first boot and kept in the storage volume.
 
 # For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html
 
@@ -52,8 +53,11 @@ COPY . .
 # -j 1 disable parallel compilation to avoid a QEMU bug: https://github.com/rails/bootsnap/issues/495
 RUN bundle exec bootsnap precompile -j 1 app/ lib/
 
-# Precompiling assets for production without requiring secret RAILS_MASTER_KEY
-RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
+# Precompiling assets for production without requiring secret RAILS_MASTER_KEY.
+# Then empty storage/: Docker copies it into every new volume, so anything left there (a
+# database, a key) would be shared by every install.
+RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile && \
+    find storage -mindepth 1 ! -name .keep -delete
 
 
 
