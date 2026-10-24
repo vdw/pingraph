@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_24_120011) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_120012) do
   create_table "groups", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -30,6 +30,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_120011) do
     t.datetime "created_at", null: false
     t.integer "expected_status_code", default: 200, null: false
     t.string "expected_status_code_range", default: "exact", null: false
+    t.integer "failure_threshold", default: 2, null: false
     t.integer "group_id", null: false
     t.string "http_method", default: "GET", null: false
     t.integer "interval", default: 60, null: false

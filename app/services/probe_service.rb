@@ -23,9 +23,14 @@ class ProbeService
   )
 
   ICMP_PACKET_COUNT = 5
+  # Seconds between packets: 0.2 is the lowest iputils allows without root, so a healthy
+  # probe takes about 1 second instead of 4 and each worker thread covers ~4x more hosts.
+  ICMP_PACKET_INTERVAL = 0.2
   ICMP_PACKET_TIMEOUT = 2
-  ICMP_COMMAND_DEADLINE = ICMP_PACKET_COUNT * ICMP_PACKET_TIMEOUT
-  FAILURE_THRESHOLD = 2
+  # Time to send every packet and wait for the last reply. With -w, ping keeps sending until
+  # it has ICMP_PACKET_COUNT replies or the deadline passes, so this also caps how long an
+  # unreachable host takes (3 seconds, down from 10).
+  ICMP_COMMAND_DEADLINE = ((ICMP_PACKET_COUNT - 1) * ICMP_PACKET_INTERVAL + ICMP_PACKET_TIMEOUT).ceil
   # Keyword checks read at most this much of the body.
   HTTP_BODY_LIMIT = 1.megabyte
   HTTP_REQUEST_CLASSES = {
@@ -75,6 +80,7 @@ class ProbeService
       "ping",
       "-c", ICMP_PACKET_COUNT.to_s,
       "-q",
+      "-i", ICMP_PACKET_INTERVAL.to_s,
       "-W", ICMP_PACKET_TIMEOUT.to_s,
       "-w", ICMP_COMMAND_DEADLINE.to_s,
       "--", # the address can never be parsed as an option
@@ -262,14 +268,14 @@ class ProbeService
     )
   end
 
-  # Status from consecutive samples:
-  #   FAILURE_THRESHOLD failures in a row                  => down
-  #   Host::DEGRADED_THRESHOLD problem samples in a row    => degraded (failed, slow or lossy)
-  #   a clean sample                                       => up
-  #   a single problem sample                              => unchanged (not enough evidence)
-  def self.status_for(current_status, failures, issues)
-    return :down if failures >= FAILURE_THRESHOLD
-    return :degraded if issues >= Host::DEGRADED_THRESHOLD
+  # Status from consecutive samples, with threshold = the host's failure_threshold:
+  #   threshold failures in a row               => down
+  #   threshold problem samples in a row        => degraded (failed, slow or lossy)
+  #   a clean sample                            => up
+  #   fewer problem samples than the threshold  => unchanged (not enough evidence)
+  def self.status_for(current_status, failures, issues, threshold)
+    return :down if failures >= threshold
+    return :degraded if issues >= threshold
     return :up if issues.zero?
 
     current_status.to_sym
@@ -307,7 +313,7 @@ class ProbeService
         result.success ? true : false, problem
       ])
       failures, issues, current_status = Host.where(id: host.id).pick(:consecutive_failures, :consecutive_issues, :status)
-      computed_status = status_for(current_status, failures, issues)
+      computed_status = status_for(current_status, failures, issues, host.failure_threshold)
 
       host.update_columns(
         status: Host.statuses.fetch(computed_status.to_s),

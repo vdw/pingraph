@@ -221,6 +221,18 @@
       <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Used by the dashboard and public status page to mark latency-based degradation.</p>
     </div>
 
+    <div>
+      <%= form.label :failure_threshold, "Confirm after", class: label_class %>
+      <div class="relative">
+        <%= form.number_field :failure_threshold, min: 1, max: Host::MAX_FAILURE_THRESHOLD, class: field_class.(:failure_threshold, "pr-28") %>
+        <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-400 dark:text-gray-500">checks in a row</span>
+      </div>
+      <p class="<%= hint_class %>">
+        Failed checks in a row before the host is Down (and problem checks before it is Degraded).
+        1 alerts on the first failure; higher values ride out brief blips. Uptime Kuma's "Retries" is this minus one.
+      </p>
+    </div>
+
     <div class="border-t border-gray-200 dark:border-gray-700 pt-5">
       <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
         <%= form.check_box :notifications_enabled,

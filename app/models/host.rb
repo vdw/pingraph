@@ -2,8 +2,10 @@ class Host < ApplicationRecord
   DEFAULT_LATENCY_THRESHOLD_MS = 350.0
   # A sample counts as a problem at 2 of 5 lost packets; a single dropped packet is noise.
   DEGRADED_PACKET_LOSS_PERCENT = 40
-  # Consecutive problem samples (failed, slow or lossy) before the host turns Degraded.
-  DEGRADED_THRESHOLD = 2
+  # Default for failure_threshold: checks in a row before the host turns Down (failed) or
+  # Degraded (failed, slow or lossy).
+  DEFAULT_FAILURE_THRESHOLD = 2
+  MAX_FAILURE_THRESHOLD = 10
   HTTP_METHODS = %w[GET HEAD POST PUT PATCH DELETE OPTIONS].freeze
   HTTP_METHODS_WITH_BODY = %w[POST PUT PATCH].freeze
   MAX_TIMEOUT_SECONDS = 60
@@ -50,6 +52,7 @@ class Host < ApplicationRecord
   validate :address_unique_within_group
   validates :interval, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 10 }
   validates :latency_threshold_ms, numericality: { greater_than: 0 }
+  validates :failure_threshold, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: MAX_FAILURE_THRESHOLD }
   validates :port, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 65_535 }, if: :tcp?
   validates :expected_status_code, numericality: { only_integer: true, greater_than_or_equal_to: 100, less_than_or_equal_to: 599 }, if: :http?
   validates :expected_status_code_range, inclusion: { in: %w[exact 2xx 3xx 4xx 5xx] }, if: :http?
@@ -228,6 +231,7 @@ class Host < ApplicationRecord
     self.address = address.strip if address.is_a?(String)
     self.latency_threshold_ms = DEFAULT_LATENCY_THRESHOLD_MS if latency_threshold_ms.blank?
     self.timeout_seconds = 5 if timeout_seconds.blank?
+    self.failure_threshold = DEFAULT_FAILURE_THRESHOLD if failure_threshold.blank?
 
     if tcp?
       self.expected_status_code_range = "exact" if expected_status_code_range.blank?

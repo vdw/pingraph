@@ -94,7 +94,7 @@ Then open [http://localhost:3000](http://localhost:3000)
 | `PINGRAPH_ADMIN_EMAIL` / `PINGRAPH_ADMIN_PASSWORD` | `admin@pingraph.local` / `pingraph123` | *Optional.* The first admin account, created on first boot only. Without a password set here, the default must be changed at first sign-in. |
 | `TIME_ZONE` | `UTC` | Set dashboard timezone (e.g., `Eastern Time (US & Canada)`, `Europe/London`, `Asia/Tokyo`) |
 | `SOLID_QUEUE_IN_PUMA=true` | — | For single-container deployments (runs scheduler + worker together) |
-| `JOB_THREADS` | `5` | Threads for the probe worker. Probes mostly wait on the network, so raise this if you monitor many hosts. Alerts always have their own worker. |
+| `JOB_THREADS` | `5` | Threads for the probe worker. Probes mostly wait on the network, so raise this if you monitor many hosts (see *Capacity* under [How It Works](#how-it-works)). Alerts always have their own worker. |
 | `APP_HOST` | `localhost` | Host used in email links when no **Base URL** is set in Settings |
 | `MAILER_FROM` | `pingraph@localhost` | Sender address for emails when no **From address** is set in Settings |
 | `ACTIVE_RECORD_ENCRYPTION_*` | auto-generated | *Optional.* Supply your own keys for encrypting notification secrets (`PRIMARY_KEY`, `DETERMINISTIC_KEY`, `KEY_DERIVATION_SALT`). If unset, a key is generated and stored in `storage/`. |
@@ -167,11 +167,13 @@ Toggle alerting per host with **Send notifications for this host** on the host's
 
 **Latency & Loss:** Probes capture min/average/max latency, jitter (ICMP) and packet loss percentage. Failed checks have no latency, so timeouts don't show up as spikes on the chart.
 
-**Status Calculation:** Status changes only on a streak, so one dropped packet doesn't raise an alert:
+**Status Calculation:** Status changes only on a streak, so one dropped packet doesn't raise an alert. The streak length is each host's **Confirm after N checks in a row** setting (default 2; Uptime Kuma's *Retries* plus one):
 - **Up** — The latest check was clean
-- **Degraded** — 2 problem checks in a row: slow (above the latency threshold), lossy (2 or more of 5 ping packets lost) or failed
-- **Down** — 2 failed checks in a row
-- **Unknown** — Never probed, or only one check so far and it had a problem
+- **Degraded** — N problem checks in a row: slow (above the latency threshold), lossy (2 or more of 5 ping packets lost) or failed
+- **Down** — N failed checks in a row
+- **Unknown** — Never probed, or fewer than N checks so far and they had problems
+
+**Capacity:** Each worker thread runs one check at a time, so roughly *hosts ≈ `JOB_THREADS` × interval ÷ check time*. A ping check takes about 1 second (3 seconds when the host doesn't answer); an HTTP or TCP check takes its response time, up to its timeout. With the default 5 threads and 60-second intervals that is about 300 ping hosts, or 100 if they could all be down at once. Size for the worst case: hosts are slowest to check exactly when they're down. The amber "checks are running late" banner tells you when to raise `JOB_THREADS`.
 
 **Uptime %:** Measured over the time Pingraph was actually monitoring. If Pingraph itself was stopped, that time isn't counted as uptime; the status page shows how much of the day was monitored.
 

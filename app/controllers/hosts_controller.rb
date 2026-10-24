@@ -177,7 +177,7 @@ class HostsController < ApplicationController
     # Only allow a list of trusted parameters through.
     def host_params
       params.expect(host: [ :name, :address, :interval, :group_id, :probe_type, :port, :expected_status_code, :expected_status_code_range, :verify_ssl, :latency_threshold_ms, :notifications_enabled, :notify_on_degraded,
-        :timeout_seconds, :http_method, :max_redirects, :keyword, :keyword_invert, :request_headers, :request_body,
+        :failure_threshold, :timeout_seconds, :http_method, :max_redirects, :keyword, :keyword_invert, :request_headers, :request_body,
         :basic_auth_user, :basic_auth_password, :ssl_expiry_warn_days ])
     end
 

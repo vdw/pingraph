@@ -9,6 +9,7 @@ class ProbeServiceIcmpTest < ActiveSupport::TestCase
 
     Open3.singleton_class.define_method(:capture3, ->(*args) {
       assert_equal "ping", args[0]
+      assert_equal [ "-i", "0.2" ], args[args.index("-i"), 2]
       assert_includes args, "-W"
       assert_includes args, ProbeService::ICMP_PACKET_TIMEOUT.to_s
       assert_includes args, "-w"

@@ -200,4 +200,17 @@ class HostTest < ActiveSupport::TestCase
     assert_not host.keyword_matches?("status: OK")
     assert host.keyword_matches?("status: down")
   end
+
+  test "failure_threshold defaults to 2 and must be 1 to 10" do
+    host = Host.new(group: groups(:one), name: "Router", address: "192.0.2.1", interval: 60, failure_threshold: nil)
+    assert host.valid?
+    assert_equal 2, host.failure_threshold
+
+    host.failure_threshold = 0
+    assert_not host.valid?
+    host.failure_threshold = 11
+    assert_not host.valid?
+    host.failure_threshold = 1
+    assert host.valid?
+  end
 end

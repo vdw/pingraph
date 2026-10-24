@@ -1,13 +1,14 @@
 module StatusPage
-  # Replays a host's probe results with the same rules ProbeService uses for the live
-  # status: Down after FAILURE_THRESHOLD failures in a row, Degraded after
-  # Host::DEGRADED_THRESHOLD problem samples in a row, and a single blip changes nothing.
+  # Replays a host's probe results with the same rules ProbeService.status_for uses for the
+  # live status: Down after failure_threshold failures in a row, Degraded after
+  # failure_threshold problem samples in a row, and a shorter streak changes nothing.
   class ResultStateCalculator
     # problem: this sample on its own was failed, slow or lossy.
     Entry = Struct.new(:result, :state, :hard_failure, :problem, keyword_init: true)
 
     def self.entries_for_host(host, start_at:, end_at:)
-      lookback_count = [ ProbeService::FAILURE_THRESHOLD, Host::DEGRADED_THRESHOLD ].max - 1
+      threshold = host.failure_threshold
+      lookback_count = threshold - 1
       prior_results = if lookback_count.positive?
         host.probe_results.where("recorded_at < ?", start_at).order(recorded_at: :desc).limit(lookback_count).to_a.reverse
       else
@@ -23,9 +24,9 @@ module StatusPage
         problem = host.result_degraded?(result)
         consecutive_failures = result.success? ? 0 : consecutive_failures + 1
         consecutive_issues = problem ? consecutive_issues + 1 : 0
-        hard_failure = consecutive_failures >= ProbeService::FAILURE_THRESHOLD
+        hard_failure = consecutive_failures >= threshold
 
-        state = state_for(consecutive_failures, consecutive_issues, previous_state)
+        state = state_for(consecutive_failures, consecutive_issues, previous_state, threshold)
         previous_state = state
 
         Entry.new(result: result, hard_failure: hard_failure, state: state, problem: problem)
@@ -41,9 +42,9 @@ module StatusPage
     end
 
     # Public-page counterpart of ProbeService.status_for.
-    def self.state_for(consecutive_failures, consecutive_issues, previous_state)
-      return :down if consecutive_failures >= ProbeService::FAILURE_THRESHOLD
-      return :degraded if consecutive_issues >= Host::DEGRADED_THRESHOLD
+    def self.state_for(consecutive_failures, consecutive_issues, previous_state, threshold)
+      return :down if consecutive_failures >= threshold
+      return :degraded if consecutive_issues >= threshold
       return :operational if consecutive_issues.zero?
 
       previous_state
