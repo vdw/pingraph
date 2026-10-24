@@ -5,8 +5,18 @@
 class NotificationDispatcher
   CHANNELS = {
     slack: ->(setting) { NotificationChannels::Slack.new(setting) },
-    email: ->(setting) { NotificationChannels::Email.new(setting) }
+    email: ->(setting) { NotificationChannels::Email.new(setting) },
+    telegram: ->(setting) { NotificationChannels::Telegram.new(setting) },
+    ntfy: ->(setting) { NotificationChannels::Ntfy.new(setting) },
+    webhook: ->(setting) { NotificationChannels::Webhook.new(setting) }
   }.freeze
+
+  # Display names (ntfy writes its name in lowercase).
+  LABELS = { slack: "Slack", email: "Email", telegram: "Telegram", ntfy: "ntfy", webhook: "Webhook" }.freeze
+
+  def self.label(name)
+    LABELS.fetch(name.to_sym) { name.to_s.capitalize }
+  end
 
   def self.deliver(payload, setting: Setting.current)
     new(setting).deliver(payload)

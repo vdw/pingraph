@@ -6,9 +6,9 @@ class SettingsController < ApplicationController
   def update
     @setting = Setting.current
     attrs = setting_params
-    # The password field renders blank for security; a blank submission must not wipe the
+    # Password fields render blank for security; a blank submission must not wipe the
     # stored secret.
-    attrs.delete(:smtp_password) if attrs[:smtp_password].blank?
+    Setting::SECRET_FIELDS.each { |field| attrs.delete(field) if attrs[field].blank? }
 
     if @setting.update(attrs)
       redirect_to edit_settings_path, notice: "Settings were successfully updated."
@@ -28,7 +28,7 @@ class SettingsController < ApplicationController
     end
 
     results = NotificationDispatcher.new(setting).deliver(test_payload(setting))
-    summary = results.map { |channel, outcome| "#{channel.to_s.capitalize}: #{format_outcome(outcome)}" }.join(" · ")
+    summary = results.map { |channel, outcome| "#{NotificationDispatcher.label(channel)}: #{format_outcome(outcome)}" }.join(" · ")
 
     if results.values.all? { |outcome| outcome == :ok }
       redirect_to edit_settings_path, notice: "Test notification — #{summary}"
@@ -46,6 +46,9 @@ class SettingsController < ApplicationController
         :email_enabled, :smtp_address, :smtp_port, :smtp_user_name, :smtp_password,
         :smtp_authentication, :smtp_starttls,
         :notification_from_email, :notification_recipient_email,
+        :telegram_enabled, :telegram_bot_token, :telegram_chat_id,
+        :ntfy_enabled, :ntfy_url, :ntfy_token,
+        :webhook_enabled, :webhook_url,
         :heartbeat_url
       ])
     end

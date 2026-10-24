@@ -32,6 +32,10 @@ class NotificationDelivery < ApplicationRecord
     NotificationPayload.from_job_args(payload)
   end
 
+  def channel_label
+    NotificationDispatcher.label(channel)
+  end
+
   def host_name
     payload["host_name"].presence || host&.name
   end

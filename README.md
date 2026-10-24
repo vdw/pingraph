@@ -24,7 +24,7 @@ Monitor latency trends, packet loss, and service availability in real-time with 
 - **Speed Tests** — On-demand throughput tests using iperf3
 
 ### Monitoring & Alerts
-- **Notifications** — Slack and email alerts on status changes (Down, Degraded, and recovery), with per-host control and a built-in "Send test notification" button
+- **Notifications** — Slack, email, Telegram, ntfy and webhook alerts on status changes (Down, Degraded, and recovery), with per-host control and a built-in "Send test notification" button
 - **Configurable Thresholds** — Set latency thresholds for degraded state (default: 350ms)
 - **Health Status Tracking** — Automatic status transitions (up → degraded → down)
 - **Historical Data** — 90-day retention with configurable cleanup (30/60/90 days)
@@ -108,7 +108,7 @@ Then open [http://localhost:3000](http://localhost:3000)
    - **Monitor a port:** address `192.168.1.10`, port `443` (TCP)
 3. **Set Thresholds** — Adjust latency thresholds (default 350ms) to match your needs
 4. **Create Status Pages** — Enable public status page for each group to share with users
-5. **Set Up Notifications** — Add a Slack webhook and/or SMTP details in Settings so you're alerted when a host goes down (see [Notifications](#notifications))
+5. **Set Up Notifications** — Add a Telegram bot, ntfy topic, Slack webhook, SMTP details or your own webhook in Settings so you're alerted when a host goes down (see [Notifications](#notifications))
 
 ---
 
@@ -119,10 +119,31 @@ Get alerted the moment something breaks — no need to watch the dashboard. Conf
 - **Base URL** — the address you use to reach Pingraph (e.g. `https://pingraph.mylan.home` or `http://192.168.1.50:3000`). Used to build the "View host" link inside each alert.
 - **Slack** — paste an [Incoming Webhook](https://api.slack.com/messaging/webhooks) URL.
 - **Email** — enter SMTP server details, credentials, and a recipient address.
+- **Telegram** — create a bot with [@BotFather](https://t.me/BotFather) and paste its token. Send the bot a message, open `https://api.telegram.org/bot<token>/getUpdates` and copy `chat.id` as the Chat ID. To alert a group, add the bot to it (group IDs start with `-`).
+- **ntfy** — enter your server and topic, e.g. `https://ntfy.sh/my-pingraph-alerts`, and subscribe to the same topic in the [ntfy app](https://ntfy.sh). Down alerts are sent at high priority. On the public ntfy.sh server anyone who knows a topic can read it, so use a long, hard-to-guess name, or your own server with an access token.
+- **Webhook** — any URL that accepts a JSON POST: Home Assistant, n8n, Node-RED or your own script (see below).
 
-Both channels can be active at the same time. Click **Send test notification** to confirm your setup.
+Any combination of channels can be active at the same time. Click **Send test notification** to confirm your setup.
 
-**Delivery is retried.** Each alert is sent to each channel separately. If Slack or your SMTP server fails, that channel is retried up to 5 times over about 6 minutes, without re-sending to channels that already worked. Every alert and its result is listed in the **Notification log** (linked from Settings). If an alert still can't be delivered, a red banner appears on every page until a later one succeeds, and you can retry it from the log.
+**Webhook body.** Each alert is POSTed with `Content-Type: application/json`:
+
+```json
+{
+  "event": "down",
+  "status": "down",
+  "text": "Router is DOWN",
+  "host": { "id": 12, "name": "Router", "group": "LAN", "url": "https://pingraph.mylan.home/hosts/12" },
+  "error_message": "100% packet loss",
+  "packet_loss": 100,
+  "latency_ms": null,
+  "status_code": null,
+  "occurred_at": "2026-10-24T12:00:00Z"
+}
+```
+
+`event` is `down`, `degraded` or `recovery`; `status` is the new state (`down`, `degraded` or `up`). Fields that don't apply to the check are `null`. Any 2xx response counts as delivered.
+
+**Delivery is retried.** Each alert is sent to each channel separately. If a channel fails, that channel is retried up to 5 times over about 6 minutes, without re-sending to channels that already worked. Every alert and its result is listed in the **Notification log** (linked from Settings). If an alert still can't be delivered, a red banner appears on every page until a later one succeeds, and you can retry it from the log.
 
 **When alerts fire:** only on *status changes*, so a host that stays down produces one alert, not one per probe cycle.
 
@@ -131,7 +152,7 @@ Both channels can be active at the same time. Click **Send test notification** t
 
 Toggle alerting per host with **Send notifications for this host** on the host's edit page (on by default once a channel is configured).
 
-**Security:** Slack webhook URLs and SMTP passwords are encrypted at rest. The encryption key is generated automatically on first boot and stored in `storage/` — keep that volume persistent (it already holds your database). To manage keys yourself, set the `ACTIVE_RECORD_ENCRYPTION_*` environment variables instead.
+**Security:** webhook URLs, ntfy topics and tokens, the Telegram bot token and SMTP passwords are encrypted at rest. The encryption key is generated automatically on first boot and stored in `storage/` — keep that volume persistent (it already holds your database). To manage keys yourself, set the `ACTIVE_RECORD_ENCRYPTION_*` environment variables instead.
 
 ---
 
@@ -149,7 +170,7 @@ Toggle alerting per host with **Send notifications for this host** on the host's
 
 **Uptime %:** Measured over the time Pingraph was actually monitoring. If Pingraph itself was stopped, that time isn't counted as uptime; the status page shows how much of the day was monitored.
 
-**Alerting:** When a host changes state, Pingraph sends Slack/email notifications (if configured). Alerts fire on transitions only — a host that stays down produces a single alert, not one per probe cycle.
+**Alerting:** When a host changes state, Pingraph sends notifications to every configured channel. Alerts fire on transitions only — a host that stays down produces a single alert, not one per probe cycle.
 
 **Data Retention:** Results are kept for 90 days by default, configurable in Settings.
 

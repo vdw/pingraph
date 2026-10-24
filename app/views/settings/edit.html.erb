@@ -122,6 +122,66 @@
             <%= form.email_field :notification_recipient_email, placeholder: "you@example.com", class: input_classes %>
           </div>
         </div>
+
+        <div class="mt-6 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200">
+            <%= form.check_box :telegram_enabled, class: checkbox_classes %>
+            Telegram
+          </label>
+          <div class="mt-3">
+            <%= form.label :telegram_bot_token, "Bot token", class: label_classes %>
+            <%= form.password_field :telegram_bot_token, autocomplete: "off",
+                  placeholder: @setting.telegram_bot_token.present? ? "•••••••• (leave blank to keep current)" : "123456789:AA…",
+                  class: "#{input_classes} font-mono" %>
+            <p class="<%= hint_classes %>">Create a bot by messaging @BotFather in Telegram.</p>
+          </div>
+          <div class="mt-3">
+            <%= form.label :telegram_chat_id, "Chat ID", class: label_classes %>
+            <%= form.text_field :telegram_chat_id, placeholder: "123456789", class: "#{input_classes} font-mono" %>
+            <p class="<%= hint_classes %>">
+              Send your bot a message, then open
+              <code class="font-mono">https://api.telegram.org/bot&lt;token&gt;/getUpdates</code> and copy
+              <code class="font-mono">chat.id</code>. Group IDs start with a minus sign; for a public channel, use its @name.
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-6 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200">
+            <%= form.check_box :ntfy_enabled, class: checkbox_classes %>
+            ntfy
+          </label>
+          <div class="mt-3">
+            <%= form.label :ntfy_url, "Topic URL", class: label_classes %>
+            <%= form.text_field :ntfy_url, placeholder: "https://ntfy.sh/my-pingraph-alerts", class: "#{input_classes} font-mono" %>
+            <p class="<%= hint_classes %>">
+              Your ntfy server followed by the topic. On the public ntfy.sh server anyone who knows the
+              topic can read it, so pick a long, hard-to-guess name.
+            </p>
+          </div>
+          <div class="mt-3">
+            <%= form.label :ntfy_token, "Access token", class: label_classes %>
+            <%= form.password_field :ntfy_token, autocomplete: "off",
+                  placeholder: @setting.ntfy_token.present? ? "•••••••• (leave blank to keep current)" : "tk_…",
+                  class: "#{input_classes} font-mono" %>
+            <p class="<%= hint_classes %>">Optional. Only needed for a server or topic that requires sign-in.</p>
+          </div>
+        </div>
+
+        <div class="mt-6 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200">
+            <%= form.check_box :webhook_enabled, class: checkbox_classes %>
+            Webhook
+          </label>
+          <div class="mt-3">
+            <%= form.label :webhook_url, "URL", class: label_classes %>
+            <%= form.text_field :webhook_url, placeholder: "https://homeassistant.local:8123/api/webhook/…", class: "#{input_classes} font-mono" %>
+            <p class="<%= hint_classes %>">
+              Each alert is POSTed here as JSON, for Home Assistant, n8n, Node-RED or your own scripts.
+              The fields are listed in the README.
+            </p>
+          </div>
+        </div>
       </div>
 
       <div class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">

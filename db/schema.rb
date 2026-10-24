@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_24_120009) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_120010) do
   create_table "groups", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -100,6 +100,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_120009) do
     t.text "heartbeat_url"
     t.string "notification_from_email"
     t.string "notification_recipient_email"
+    t.boolean "ntfy_enabled", default: false, null: false
+    t.text "ntfy_token"
+    t.text "ntfy_url"
     t.datetime "poller_heartbeat_at"
     t.integer "probe_result_retention_days", default: 90, null: false
     t.boolean "slack_enabled", default: false, null: false
@@ -110,7 +113,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_120009) do
     t.integer "smtp_port", default: 587, null: false
     t.boolean "smtp_starttls", default: true, null: false
     t.string "smtp_user_name"
+    t.text "telegram_bot_token"
+    t.string "telegram_chat_id"
+    t.boolean "telegram_enabled", default: false, null: false
     t.datetime "updated_at", null: false
+    t.boolean "webhook_enabled", default: false, null: false
+    t.text "webhook_url"
   end
 
   create_table "solid_cable_messages", force: :cascade do |t|

@@ -65,6 +65,37 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "s3cret", Setting.current.smtp_password
   end
 
+  test "blank bot and ntfy tokens do not overwrite the stored secrets" do
+    Setting.current.update!(
+      probe_result_retention_days: 90, base_url: "https://pg.test",
+      telegram_enabled: true, telegram_bot_token: "123456:SECRET", telegram_chat_id: "42",
+      ntfy_enabled: true, ntfy_url: "https://ntfy.sh/alerts", ntfy_token: "tk_secret"
+    )
+
+    patch settings_url, params: { setting: {
+      probe_result_retention_days: 90, base_url: "https://pg.test",
+      telegram_enabled: true, telegram_bot_token: "", telegram_chat_id: "43",
+      ntfy_enabled: true, ntfy_url: "https://ntfy.sh/alerts", ntfy_token: ""
+    } }
+
+    assert_redirected_to edit_settings_url
+    setting = Setting.current
+    assert_equal "123456:SECRET", setting.telegram_bot_token
+    assert_equal "43", setting.telegram_chat_id
+    assert_equal "tk_secret", setting.ntfy_token
+  end
+
+  test "updates the webhook channel" do
+    patch settings_url, params: { setting: {
+      probe_result_retention_days: 90, base_url: "https://pg.test",
+      webhook_enabled: true, webhook_url: "http://n8n.lan/webhook/x"
+    } }
+
+    assert_redirected_to edit_settings_url
+    assert Setting.current.webhook_enabled?
+    assert_equal "http://n8n.lan/webhook/x", Setting.current.webhook_url
+  end
+
   test "test_notification requires an enabled channel" do
     post test_notification_settings_url
 
@@ -75,7 +106,8 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
   test "test_notification reports the per-channel outcome" do
     Setting.current.update!(
       probe_result_retention_days: 90, base_url: "https://pg.test",
-      slack_enabled: true, slack_webhook_url: "https://hooks.slack.com/services/x"
+      slack_enabled: true, slack_webhook_url: "https://hooks.slack.com/services/x",
+      ntfy_enabled: true, ntfy_url: "https://ntfy.sh/alerts"
     )
     original = Net::HTTP.method(:new)
     Net::HTTP.singleton_class.define_method(:new) { |_host, _port| StubOkHttp.new }
@@ -83,7 +115,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     post test_notification_settings_url
 
     assert_redirected_to edit_settings_url
-    assert_match(/Slack: sent/, flash[:notice])
+    assert_match(/Slack: sent · ntfy: sent/, flash[:notice])
   ensure
     Net::HTTP.singleton_class.define_method(:new, original)
   end
