@@ -58,8 +58,15 @@ class Host < ApplicationRecord
 
   # The persisted status is computed by ProbeService from consecutive samples, so a single
   # bad sample does not flip the badge (and no extra query is needed per host).
+  # :stale when checks have stopped, so a dead worker doesn't leave hosts showing Up.
   def status_badge
-    status.to_sym
+    stale? ? :stale : status.to_sym
+  end
+
+  # No check for three intervals (and at least ProbeHealth::STALL_AFTER, so a short restart
+  # doesn't flag fast hosts): the stored status is out of date.
+  def stale?(now = Time.current)
+    last_probed_at.present? && last_probed_at < now - [ interval.seconds * 3, ProbeHealth::STALL_AFTER ].max
   end
 
   # True when this one sample is a problem: failed, too slow, or too much packet loss.

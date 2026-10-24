@@ -45,7 +45,8 @@ class SettingsController < ApplicationController
         :slack_enabled, :slack_webhook_url,
         :email_enabled, :smtp_address, :smtp_port, :smtp_user_name, :smtp_password,
         :smtp_authentication, :smtp_starttls,
-        :notification_from_email, :notification_recipient_email
+        :notification_from_email, :notification_recipient_email,
+        :heartbeat_url
       ])
     end
 

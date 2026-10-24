@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_24_120008) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_120009) do
   create_table "groups", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -97,8 +97,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_120008) do
     t.string "base_url"
     t.datetime "created_at", null: false
     t.boolean "email_enabled", default: false, null: false
+    t.text "heartbeat_url"
     t.string "notification_from_email"
     t.string "notification_recipient_email"
+    t.datetime "poller_heartbeat_at"
     t.integer "probe_result_retention_days", default: 90, null: false
     t.boolean "slack_enabled", default: false, null: false
     t.text "slack_webhook_url"

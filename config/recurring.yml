@@ -19,6 +19,10 @@ production:
   poll_hosts:
     class: HostPollerJob
     schedule: every minute
+  heartbeat:
+    class: HeartbeatJob
+    queue: notifications
+    schedule: every minute
 
 development:
   cleanup_probe_results:
@@ -26,4 +30,8 @@ development:
     schedule: every day at 2am
   poll_hosts:
     class: HostPollerJob
+    schedule: every minute
+  heartbeat:
+    class: HeartbeatJob
+    queue: notifications
     schedule: every minute

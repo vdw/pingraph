@@ -50,4 +50,21 @@ class ProbeJobTest < ActiveJob::TestCase
   ensure
     ProbeService.singleton_class.define_method(:execute, original)
   end
+
+  test "counts late and skipped probes for the falling-behind warning" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    with_stubbed_execute do
+      [ 5.seconds.ago, 45.seconds.ago, 5.minutes.ago ].each do |scheduled_at|
+        job = ProbeJob.new(@host.id)
+        job.scheduled_at = scheduled_at
+        job.perform_now
+      end
+    end
+
+    assert_equal({ late: 2, total: 3 }, ProbeHealth.probe_counts)
+  ensure
+    Rails.cache = original_cache
+  end
 end

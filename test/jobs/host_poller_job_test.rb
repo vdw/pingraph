@@ -94,4 +94,14 @@ class HostPollerJobTest < ActiveJob::TestCase
       assert_operator times.first, :>=, Time.current
     end
   end
+
+  test "records a heartbeat for stalled-probing detection" do
+    Setting.current.update_columns(poller_heartbeat_at: nil)
+
+    freeze_time do
+      HostPollerJob.perform_now
+
+      assert_equal Time.current, Setting.current.poller_heartbeat_at
+    end
+  end
 end

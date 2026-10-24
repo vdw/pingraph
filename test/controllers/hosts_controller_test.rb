@@ -125,4 +125,22 @@ class HostsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal [], JSON.parse(response.body)
   end
+
+  test "dashboard warns when hosts are not being checked" do
+    Setting.current.update_columns(poller_heartbeat_at: 10.minutes.ago)
+
+    get root_url
+
+    assert_response :success
+    assert_includes response.body, "Hosts are not being checked"
+  end
+
+  test "dashboard has no probing warning while the poller runs" do
+    ProbeHealth.record_poll!
+
+    get root_url
+
+    assert_response :success
+    assert_not_includes response.body, "Hosts are not being checked"
+  end
 end

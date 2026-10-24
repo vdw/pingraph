@@ -144,6 +144,32 @@
       </div>
     <% end %>
 
+    <%# Probing health banners (see ProbeHealth) %>
+    <% case probe_health_warning %>
+    <% when :stalled %>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
+        <div class="rounded-md border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+          <strong class="font-semibold">Hosts are not being checked.</strong>
+          <% if (last_poll_at = ProbeHealth.last_poll_at) %>
+            The scheduler last ran <%= time_ago_in_words(last_poll_at) %> ago,
+          <% else %>
+            The scheduler has never run,
+          <% end %>
+          so statuses are out of date and no alerts will be sent. Is the background worker running?
+          In Docker, set <code class="font-mono text-xs">SOLID_QUEUE_IN_PUMA=true</code>.
+        </div>
+      </div>
+    <% when :falling_behind %>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
+        <div class="rounded-md border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+          <strong class="font-semibold">Checks are running late.</strong>
+          <% counts = ProbeHealth.probe_counts %>
+          <%= counts[:late] %> of the last <%= counts[:total] %> checks started late or were skipped.
+          Raise <code class="font-mono text-xs">JOB_THREADS</code> or use longer intervals.
+        </div>
+      </div>
+    <% end %>
+
     <%# Flash messages %>
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
       <% flash.each do |type, message| %>

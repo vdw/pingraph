@@ -11,6 +11,7 @@ class ProbeJob < ApplicationJob
 
   def perform(host_id)
     host = Host.find(host_id)
+    ProbeHealth.record_probe!(late: late_by > ProbeHealth::LATE_AFTER)
     return if stale?(host)
 
     ProbeService.execute(host)
@@ -24,14 +25,15 @@ class ProbeJob < ApplicationJob
   # overtaken by a newer slot. Running it late would only add load while the queue
   # is already behind.
   def stale?(host)
-    return false if scheduled_at.nil?
-
-    late_by = Time.current - scheduled_at
     if late_by > [ host.interval, 60 ].max.seconds
       Rails.logger.warn "[ProbeJob] Skipping probe for host ##{host.id}: #{late_by.round}s late."
       true
     else
       false
     end
+  end
+
+  def late_by
+    scheduled_at ? Time.current - scheduled_at : 0
   end
 end

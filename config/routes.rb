@@ -34,6 +34,7 @@ Rails.application.routes.draw do
   resource :session
   resources :passwords, param: :token
 
-  # Health check
+  # Health check: /up answers when the app boots, /health also checks that probes are running.
   get "up" => "rails/health#show", as: :rails_health_check
+  get "health" => "health#show", as: :health
 end

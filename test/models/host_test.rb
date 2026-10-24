@@ -131,4 +131,25 @@ class HostTest < ActiveSupport::TestCase
     assert_nil delivery.reload.host_id, "the notification log keeps entries for deleted hosts"
     assert_equal host.name, delivery.host_name
   end
+
+  test "a host not checked for three intervals (at least three minutes) is stale" do
+    host = hosts(:one)
+    host.update_columns(status: Host.statuses.fetch("up"), interval: 60)
+
+    freeze_time do
+      host.last_probed_at = nil
+      assert_not host.stale?, "never probed is unknown, not stale"
+
+      host.last_probed_at = 2.minutes.ago
+      assert_not host.stale?
+      assert_equal :up, host.status_badge
+
+      host.last_probed_at = 4.minutes.ago
+      assert host.stale?
+      assert_equal :stale, host.status_badge
+
+      host.interval = 600
+      assert_not host.stale?, "a slow host is only stale after three of its own intervals"
+    end
+  end
 end

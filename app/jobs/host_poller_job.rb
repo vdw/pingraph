@@ -14,6 +14,9 @@ class HostPollerJob < ApplicationJob
     Host.where(next_probe_at: nil).or(Host.where(next_probe_at: ...window_end)).find_each do |host|
       schedule(host, now, window_end)
     end
+
+    # Recorded last, so a run that fails to schedule doesn't count as a healthy one.
+    ProbeHealth.record_poll!(now)
   end
 
   private

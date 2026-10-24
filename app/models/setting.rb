@@ -11,6 +11,8 @@ class Setting < ApplicationRecord
   # config/initializers/active_record_encryption.rb.
   encrypts :slack_webhook_url
   encrypts :smtp_password
+  # Ping URLs (healthchecks.io and the like) are secrets: anyone with one can fake a ping.
+  encrypts :heartbeat_url
 
   before_validation :normalize_blanks
 
@@ -31,10 +33,12 @@ class Setting < ApplicationRecord
   validates :base_url, presence: true, if: :any_channel_enabled?
   validate :base_url_must_be_valid, if: -> { base_url.present? }
 
+  validate :heartbeat_url_must_be_valid, if: -> { heartbeat_url.present? }
+
   # Belt-and-braces: refuse to enable a channel (which means persisting a secret) if the
   # encryption keys aren't resolvable, so a broken deploy fails as a friendly form error
   # rather than a 500 on save. Keys are normally always present (see the initializer).
-  validate :encryption_must_be_configured, if: :any_channel_enabled?
+  validate :encryption_must_be_configured, if: -> { any_channel_enabled? || heartbeat_url.present? }
 
   def self.current
     first_or_create!(probe_result_retention_days: DEFAULT_RETENTION_DAYS)
@@ -75,6 +79,7 @@ class Setting < ApplicationRecord
     self.notification_from_email = notification_from_email.presence
     self.notification_recipient_email = notification_recipient_email.presence
     self.base_url = base_url.presence
+    self.heartbeat_url = heartbeat_url.presence
   end
 
   def slack_webhook_url_must_be_https
@@ -98,6 +103,13 @@ class Setting < ApplicationRecord
     errors.add(:base_url, "must be a valid http(s):// URL") unless uri.is_a?(URI::HTTP) && uri.host.present?
   rescue URI::InvalidURIError
     errors.add(:base_url, "must be a valid http(s):// URL")
+  end
+
+  def heartbeat_url_must_be_valid
+    uri = URI.parse(heartbeat_url)
+    errors.add(:heartbeat_url, "must be a valid http(s):// URL") unless uri.is_a?(URI::HTTP) && uri.host.present?
+  rescue URI::InvalidURIError
+    errors.add(:heartbeat_url, "must be a valid http(s):// URL")
   end
 
   def encryption_must_be_configured

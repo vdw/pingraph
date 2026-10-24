@@ -68,7 +68,8 @@ module Public
         average_latency: average_latency_for(blocks),
         uptime_percentage: StatusPage::UptimeBucketBuilder.percentage(blocks),
         coverage: StatusPage::UptimeBucketBuilder.coverage(blocks),
-        state: StatusPage::ResultStateCalculator.latest_state(host)
+        # A stale host's last state is out of date, so don't show it as operational.
+        state: host.stale? ? :no_data : StatusPage::ResultStateCalculator.latest_state(host)
       }
     end
 

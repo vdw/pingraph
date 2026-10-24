@@ -77,6 +77,10 @@ COPY --chown=rails:rails --from=build /rails /rails
 # Entrypoint prepares the database.
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
+# Unhealthy when probing stops (e.g. no worker running), not only when the app is down.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=3m --retries=3 \
+  CMD curl -fsS -o /dev/null http://localhost:${HTTP_PORT:-80}/health || exit 1
+
 # Start server via Thruster by default, this can be overwritten at runtime
 EXPOSE 80
 CMD ["./bin/thrust", "./bin/rails", "server"]

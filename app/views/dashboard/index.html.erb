@@ -59,7 +59,8 @@
                           <%= status == :up ? 'bg-green-400' :
                               status == :degraded ? 'bg-yellow-400' :
                               status == :down ? 'bg-red-500' :
-                              'bg-gray-300' %>">
+                              'bg-gray-300' %>"
+                          title="<%= status.to_s.humanize %>">
                         </span>
                       </td>
                       <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">
@@ -103,6 +104,10 @@
                       </td>
                       <td class="py-3 px-4 text-xs text-gray-400 dark:text-gray-500">
                         <%= probe_result ? time_ago_in_words(probe_result.recorded_at) + " ago" : "Never" %>
+                        <% if status == :stale %>
+                          <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300"
+                                title="No check for several intervals. The status shown may be out of date.">Stale</span>
+                        <% end %>
                       </td>
                       <td class="py-3 px-4 text-right text-sm">
                         <%= link_to "Details →", host_path(host),

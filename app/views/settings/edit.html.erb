@@ -124,6 +124,27 @@
         </div>
       </div>
 
+      <div class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Monitoring health</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">
+          <% if (last_poll_at = ProbeHealth.last_poll_at) %>
+            The scheduler last ran <%= time_ago_in_words(last_poll_at) %> ago.
+          <% else %>
+            The scheduler hasn't run yet.
+          <% end %>
+          <code class="font-mono text-xs">GET /health</code> returns 503 when checks have stopped.
+        </p>
+
+        <div>
+          <%= form.label :heartbeat_url, "Heartbeat URL", class: label_classes %>
+          <%= form.text_field :heartbeat_url, placeholder: "https://hc-ping.com/…", class: "#{input_classes} font-mono" %>
+          <p class="<%= hint_classes %>">
+            Optional. Pingraph requests this URL every minute while checks are running, so a service
+            like healthchecks.io can alert you if Pingraph itself goes down.
+          </p>
+        </div>
+      </div>
+
       <div class="mt-6">
         <%= form.submit "Save settings", class: "rounded-lg bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm cursor-pointer transition-colors" %>
       </div>

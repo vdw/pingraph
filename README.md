@@ -183,6 +183,9 @@ Deploy with:
 docker compose up -d
 ```
 
+The image has a health check (`GET /health`), so `docker ps` shows the container as
+*unhealthy* when checks stop running, not only when the web server is down.
+
 ### Systemd Service
 
 For bare-metal deployments, use systemd to manage the Rails process:
@@ -219,11 +222,15 @@ WantedBy=multi-user.target
 
 ## Monitoring Your Monitors
 
-To ensure probes are running:
+A monitor that silently stops checking is worse than none, so Pingraph tells you:
 
-1. **Check Dashboard** — All hosts should show "Last Seen" timestamps within their interval
-2. **Verify Background Jobs** — Look for recent "Last Seen" updates (should be every 1-2 minutes)
-3. **Monitor Database Size** — SQLite file growth (typically ~1 MB per 1000 hosts/month)
+- **Red banner** — "Hosts are not being checked" when the scheduler hasn't run for 3 minutes, usually because the background worker isn't running (set `SOLID_QUEUE_IN_PUMA=true` in a single container).
+- **Amber banner** — "Checks are running late" when many checks start late or are skipped because the worker can't keep up. Raise `JOB_THREADS` or use longer intervals.
+- **Stale badge** — a host with no check for 3 of its intervals (at least 3 minutes) shows *Stale* on the dashboard, and *No data* on the public status page, instead of its last status.
+- **`GET /health`** — no login needed. Returns `200 {"status":"ok"}` while checks run and `503 {"status":"stalled"}` when they've stopped. Point another monitor at it, or rely on the Docker health check. (`/up` only says the web app booted.)
+- **Heartbeat URL** — in **Settings → Monitoring health**, paste a ping URL from a service such as [healthchecks.io](https://healthchecks.io). Pingraph requests it every minute while checks are running, so you're alerted if Pingraph itself goes down. The URL is encrypted at rest.
+
+Also keep an eye on database size: SQLite grows roughly 1 MB per 1000 hosts per month.
 
 ---
 
@@ -238,6 +245,7 @@ docker exec pingraph bin/rails "pingraph:reset_password[you@example.com]"
 With Email (SMTP) configured in Settings, the sign-in page also offers "Forgot password?".
 
 ### Hosts not probing?
+- Look for the red "Hosts are not being checked" banner: the background worker isn't running (`SOLID_QUEUE_IN_PUMA=true`)
 - Check host interval is at least 10 seconds
 - Verify network connectivity from Pingraph to target (can you ping it from the server?)
 - Check logs: `docker logs pingraph` (or `tail -f log/production.log`)

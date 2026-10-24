@@ -70,4 +70,19 @@ class Public::StatusControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, %(<meta http-equiv="refresh" content="60">)
   end
+
+  test "a stale host is not shown as operational" do
+    group = groups(:one)
+    group.update!(is_public: true, status_slug: "core-infra")
+    host = hosts(:one)
+    host.probe_results.delete_all
+    host.probe_results.create!(probe_type: :icmp, success: true, latency: 5.0, packet_loss: 0, recorded_at: 2.hours.ago)
+    host.update_columns(status: Host.statuses.fetch("up"), last_probed_at: 2.hours.ago)
+
+    get public_status_url
+
+    assert_response :success
+    assert_includes response.body, "No data"
+    assert_not_includes response.body, "All Systems Operational"
+  end
 end
