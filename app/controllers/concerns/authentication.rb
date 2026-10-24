@@ -10,6 +10,12 @@ module Authentication
     def allow_unauthenticated_access(**options)
       skip_before_action :require_authentication, **options
     end
+
+    # Signed in, but reachable while a password change is pending.
+    def allow_pending_password_change(**options)
+      skip_before_action :require_authentication, **options
+      before_action :resume_session_or_request_authentication, **options
+    end
   end
 
   private
@@ -18,6 +24,21 @@ module Authentication
     end
 
     def require_authentication
+      if resume_session
+        require_password_change
+      else
+        request_authentication
+      end
+    end
+
+    # A seeded or reset password must be replaced before anything else can be used.
+    def require_password_change
+      return unless Current.user.must_change_password?
+
+      redirect_to edit_account_path, alert: "Choose a new password to continue."
+    end
+
+    def resume_session_or_request_authentication
       resume_session || request_authentication
     end
 

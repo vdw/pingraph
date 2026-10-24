@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_25_100300) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_120008) do
   create_table "groups", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -272,6 +272,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_100300) do
   create_table "users", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email_address", null: false
+    t.boolean "must_change_password", default: false, null: false
     t.string "password_digest", null: false
     t.datetime "updated_at", null: false
     t.index ["email_address"], name: "index_users_on_email_address", unique: true

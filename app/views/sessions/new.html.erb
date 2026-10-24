@@ -31,7 +31,11 @@
       <% end %>
 
       <p class="text-sm text-center text-gray-400 dark:text-gray-500 mt-4">
-        <%= link_to "Forgot password?", new_password_path, class: "text-indigo-600 hover:text-indigo-500" %>
+        <% if Setting.current.email_enabled? %>
+          <%= link_to "Forgot password?", new_password_path, class: "text-indigo-600 hover:text-indigo-500" %>
+        <% else %>
+          Locked out? Run <code class="font-mono text-xs">bin/rails pingraph:reset_password</code> on the server.
+        <% end %>
       </p>
     </div>
   </div>

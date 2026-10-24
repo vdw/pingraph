@@ -30,4 +30,14 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
     assert_empty cookies[:session_id]
   end
+
+  test "new offers a reset link only when email is set up" do
+    get new_session_path
+    assert_select "a", text: "Forgot password?", count: 0
+    assert_includes response.body, "pingraph:reset_password"
+
+    Setting.current.update_columns(email_enabled: true)
+    get new_session_path
+    assert_select "a", text: "Forgot password?"
+  end
 end

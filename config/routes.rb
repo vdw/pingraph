@@ -30,6 +30,7 @@ Rails.application.routes.draw do
     end
   end
 
+  resource :account, only: [ :edit, :update ]
   resource :session
   resources :passwords, param: :token
 

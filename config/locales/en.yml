@@ -29,3 +29,10 @@
 
 en:
   hello: "Hello world"
+  activerecord:
+    attributes:
+      user:
+        email_address: "Email"
+        password: "New password"
+        password_confirmation: "New password confirmation"
+        password_challenge: "Current password"

@@ -64,7 +64,8 @@ Open [http://localhost:3000](http://localhost:3000) and sign in with:
 - **Email:** `admin@pingraph.local`
 - **Password:** `pingraph123`
 
-> **Important:** Change credentials after first login!
+You'll be asked to choose a new password straight away. To skip the default, set
+`PINGRAPH_ADMIN_EMAIL` and `PINGRAPH_ADMIN_PASSWORD` on the first start instead.
 
 No master key is needed: the session secret and the encryption key are generated on first boot
 and kept in the `pingraph_storage` volume, next to the database. Keep that volume persistent.
@@ -90,6 +91,7 @@ Then open [http://localhost:3000](http://localhost:3000)
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `SECRET_KEY_BASE` | auto-generated | *Optional.* Signs session cookies. If unset, one is generated on first boot and stored in `storage/secret_key_base`. |
+| `PINGRAPH_ADMIN_EMAIL` / `PINGRAPH_ADMIN_PASSWORD` | `admin@pingraph.local` / `pingraph123` | *Optional.* The first admin account, created on first boot only. Without a password set here, the default must be changed at first sign-in. |
 | `TIME_ZONE` | `UTC` | Set dashboard timezone (e.g., `Eastern Time (US & Canada)`, `Europe/London`, `Asia/Tokyo`) |
 | `SOLID_QUEUE_IN_PUMA=true` | — | For single-container deployments (runs scheduler + worker together) |
 | `JOB_THREADS` | `5` | Threads for the probe worker. Probes mostly wait on the network, so raise this if you monitor many hosts. Alerts always have their own worker. |
@@ -204,7 +206,7 @@ WantedBy=multi-user.target
 
 ### Production Checklist
 
-- [ ] Change default admin credentials
+- [ ] Change the default admin password (you're prompted at first sign-in)
 - [ ] Keep `storage/` persistent and back it up: it holds the database and the generated keys
 - [ ] Configure TIME_ZONE for your location
 - [ ] Set up persistent volume or backup strategy for database
@@ -226,6 +228,14 @@ To ensure probes are running:
 ---
 
 ## Troubleshooting
+
+### Locked out?
+If email isn't set up, reset a password from the server. It prints a temporary password that must be changed at the next sign-in:
+```bash
+docker exec pingraph bin/rails pingraph:reset_password                      # when there's one user
+docker exec pingraph bin/rails "pingraph:reset_password[you@example.com]"
+```
+With Email (SMTP) configured in Settings, the sign-in page also offers "Forgot password?".
 
 ### Hosts not probing?
 - Check host interval is at least 10 seconds
