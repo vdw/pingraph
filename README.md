@@ -220,6 +220,16 @@ WantedBy=multi-user.target
 
 ---
 
+## Security Notice: Encryption Key in Older Docker Images
+
+Docker images published between 2026-07-05 and 2026-10-24 (`sha-106faa7` through `sha-61dbd51`, and `latest` during that time) contained a pre-generated `storage/encryption.key`. Docker copies that file into a new named volume, so installs started from those images share an encryption key that anyone can extract from the public image. The key protects the Slack webhook URL and SMTP password stored in the database; on its own it gives no access to Pingraph, but it makes those secrets readable to anyone who also gets a copy of your database.
+
+**What to do:** update to the current image and restart. On boot, Pingraph recognizes the published keys, generates a new one and re-encrypts your secrets, and logs a line starting with `[Pingraph]`. If your database (or a backup of it) has ever been copied somewhere you don't control, also regenerate your Slack webhook and change your SMTP password.
+
+Installs that mount a host directory (`-v /some/path:/rails/storage`) instead of a named volume, or that set `ACTIVE_RECORD_ENCRYPTION_*`, are not affected. To rotate the key by hand at any time, run `bin/rails pingraph:rotate_encryption_key` and restart.
+
+---
+
 ## Monitoring Your Monitors
 
 A monitor that silently stops checking is worse than none, so Pingraph tells you:

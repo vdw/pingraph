@@ -15,6 +15,15 @@ class StorageSecretTest < ActiveSupport::TestCase
     assert_equal [ "secret" ], @path.dirname.children.map { |child| child.basename.to_s }
   end
 
+  test "replace! overwrites the file with owner-only permissions and leaves no temp file" do
+    StorageSecret.fetch(@path) { "old" }
+    StorageSecret.replace!(@path, "new")
+
+    assert_equal "new", @path.read
+    assert_equal 0o600, @path.stat.mode & 0o777
+    assert_equal [ "secret" ], @path.dirname.children.map { |child| child.basename.to_s }
+  end
+
   test "build_time? follows SECRET_KEY_BASE_DUMMY" do
     original = ENV["SECRET_KEY_BASE_DUMMY"]
 

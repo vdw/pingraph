@@ -29,6 +29,18 @@ module StorageSecret
     path.read
   end
 
+  # Replaces the file atomically (rename(2)), for key rotation: readers see the old contents
+  # or the new ones, never a partial file.
+  def self.replace!(path, contents)
+    path = Pathname(path)
+    tmp = path.dirname.join("#{path.basename}.#{Process.pid}.tmp")
+    tmp.write(contents)
+    tmp.chmod(0o600)
+    File.rename(tmp.to_s, path.to_s)
+  ensure
+    tmp.delete if tmp&.exist?
+  end
+
   # Docker builds run assets:precompile with SECRET_KEY_BASE_DUMMY set. Nothing may be
   # generated then: storage/ in the image would be copied into every new volume, giving
   # every install the same, publicly downloadable secret.
