@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Compiles the marketing site's CSS (docs/assets/site.src.css -> docs/assets/site.css).
+# Run after changing classes in docs/*.html; commit the output, since GitHub Pages serves docs/ as-is.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+exec bundle exec tailwindcss -i docs/assets/site.src.css -o docs/assets/site.css --minify

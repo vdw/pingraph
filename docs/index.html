@@ -3,237 +3,68 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pingraph — Modern Network Latency Monitoring for Homelabs</title>
-  <meta name="description" content="A self-hosted alternative to SmokePing. Built with Rails 8, visualizations in minutes. Zero configuration files.">
-  <link rel="icon" href="https://raw.githubusercontent.com/vdw/pingraph/main/public/icon.svg" type="image/svg+xml">
+  <title>Pingraph — Self-Hosted Latency &amp; Uptime Monitoring</title>
+  <meta name="description" content="Open-source, self-hosted monitor: SmokePing-style latency graphs plus HTTP, TCP, DNS, Docker and push checks, alerts and public status pages in one Docker container.">
+  <link rel="canonical" href="https://pingraph.io/">
+  <meta name="theme-color" content="#111827">
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            slate: {
-              950: '#0a0f1a',
-              900: '#111827',
-              800: '#1f2937',
-              700: '#374151',
-            },
-            cyan: { DEFAULT: '#06B6D4', dark: '#0891b2', light: '#67e8f9' },
-            emerald: { DEFAULT: '#10B981' },
-            amber:   { DEFAULT: '#F59E0B' },
-          },
-          fontFamily: {
-            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-            mono: ['"Fira Code"', 'ui-monospace', 'monospace'],
-          },
-          letterSpacing: { tighter: '-0.03em' },
-          lineHeight: { relaxed: '1.7' },
-        },
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/icon-512.png" type="image/png" sizes="512x512">
+  <link rel="apple-touch-icon" href="/assets/icon-512.png">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Pingraph">
+  <meta property="og:url" content="https://pingraph.io/">
+  <meta property="og:title" content="Pingraph — Self-Hosted Latency &amp; Uptime Monitoring">
+  <meta property="og:description" content="SmokePing-style latency graphs plus Uptime Kuma-style checks, alerts and status pages. One Docker container, SQLite, no config files.">
+  <meta property="og:image" content="https://pingraph.io/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Pingraph logo with the tagline Latency graphs and uptime monitoring in one self-hosted box">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/site.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://pingraph.io/#software",
+        "name": "Pingraph",
+        "url": "https://pingraph.io/",
+        "description": "Open-source, self-hosted latency and uptime monitor: SmokePing-style latency graphs plus HTTP, TCP, DNS, Docker, Redis and push checks, alerts and public status pages.",
+        "applicationCategory": "DeveloperApplication",
+        "applicationSubCategory": "Network monitoring",
+        "operatingSystem": "Linux, macOS, Windows (Docker)",
+        "license": "https://opensource.org/licenses/MIT",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "downloadUrl": "https://github.com/vdw/pingraph",
+        "codeRepository": "https://github.com/vdw/pingraph",
+        "screenshot": "https://pingraph.io/assets/dashboard-screenshot.png",
+        "image": "https://pingraph.io/assets/og.png"
       },
-    }
+      {
+        "@type": "WebSite",
+        "@id": "https://pingraph.io/#website",
+        "url": "https://pingraph.io/",
+        "name": "Pingraph"
+      }
+    ]
+  }
   </script>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-
-    :root {
-      --bg:      #111827;
-      --surface: #1f2937;
-      --border:  #374151;
-      --cyan:    #06B6D4;
-      --emerald: #10B981;
-      --amber:   #F59E0B;
-      --text:    #f9fafb;
-      --muted:   #9ca3af;
-    }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      background-color: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* ── Glow background ── */
-    .hero-glow {
-      background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(6,182,212,0.14) 0%, transparent 70%),
-                  radial-gradient(ellipse 50% 30% at 80% 60%, rgba(16,185,129,0.06) 0%, transparent 60%);
-    }
-
-    /* ── Grain texture overlay ── */
-    .grain::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none;
-      border-radius: inherit;
-    }
-
-    /* ── Cards ── */
-    .feature-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.5rem;
-      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
-                  box-shadow 0.22s ease,
-                  border-color 0.18s ease;
-      box-shadow:
-        0 1px 2px rgba(0,0,0,0.5),
-        0 4px 12px rgba(0,0,0,0.3),
-        0 0 0 0 rgba(6,182,212,0);
-    }
-    .feature-card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(6,182,212,0.35);
-      box-shadow:
-        0 2px 4px rgba(0,0,0,0.5),
-        0 12px 28px rgba(0,0,0,0.4),
-        0 0 20px rgba(6,182,212,0.08);
-    }
-
-    /* ── Logo text ── */
-    .logo-text {
-      font-weight: 700;
-      font-size: 1.2rem;
-      letter-spacing: -0.02em;
-      color: var(--text);
-    }
-
-    /* ── Heading ── */
-    .hero-heading {
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-      color: var(--text);
-    }
-
-    /* ── Browser chrome mockup ── */
-    .browser-bar {
-      background: #1a2233;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-      padding: 0.6rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    .dot-red   { background: #ef4444; }
-    .dot-amber { background: #f59e0b; }
-    .dot-green { background: #10b981; }
-    .url-bar {
-      flex: 1;
-      background: rgba(255,255,255,0.06);
-      border-radius: 6px;
-      padding: 0.2rem 0.75rem;
-      font-size: 0.72rem;
-      font-family: 'Fira Code', monospace;
-      color: var(--muted);
-      text-align: center;
-      max-width: 280px;
-      margin: 0 auto;
-    }
-
-    /* ── Terminal ── */
-    .terminal {
-      background: #0d1117;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow:
-        0 0 0 1px rgba(6,182,212,0.08),
-        0 8px 32px rgba(0,0,0,0.6),
-        0 2px 8px rgba(0,0,0,0.4);
-    }
-    .terminal-bar {
-      background: #161b22;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-      padding: 0.65rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .terminal-label {
-      font-family: 'Fira Code', monospace;
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-left: auto;
-    }
-    .terminal-body {
-      padding: 1.25rem 1.5rem;
-      font-family: 'Fira Code', monospace;
-      font-size: 0.875rem;
-      line-height: 1.7;
-    }
-    .prompt { color: var(--emerald); user-select: none; }
-    .cmd    { color: var(--text); }
-    .flag   { color: var(--cyan); }
-
-    /* ── GitHub link ── */
-    .gh-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: var(--muted);
-      font-size: 0.875rem;
-      font-weight: 500;
-      text-decoration: none;
-      padding: 0.4rem 0.85rem;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      transition: color 0.15s ease,
-                  border-color 0.15s ease,
-                  background 0.15s ease;
-    }
-    .gh-link:hover  { color: var(--text); border-color: rgba(6,182,212,0.4); background: rgba(6,182,212,0.06); }
-    .gh-link:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
-    .gh-link:active { opacity: 0.8; }
-
-    /* ── Badge ── */
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.375rem;
-      font-size: 0.7rem;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      padding: 0.2rem 0.6rem;
-      border-radius: 999px;
-    }
-    .badge-emerald { background: rgba(16,185,129,0.12); color: var(--emerald); border: 1px solid rgba(16,185,129,0.25); }
-    .badge-cyan    { background: rgba(6,182,212,0.10); color: var(--cyan);    border: 1px solid rgba(6,182,212,0.2);  }
-
-    /* ── Footer link ── */
-    .footer-link {
-      color: var(--muted);
-      text-decoration: none;
-      transition: color 0.15s ease;
-    }
-    .footer-link:hover  { color: var(--cyan); }
-    .footer-link:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; border-radius: 2px; }
-
-    /* ── Divider line ──*/
-    .divider { border: none; border-top: 1px solid var(--border); }
-  </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
   <!-- ══════════════════════════════════════════
        HEADER
   ══════════════════════════════════════════ -->
-  <header class="sticky top-0 z-50 border-b" style="background:rgba(17,24,39,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-color:var(--border);">
-    <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+  <header class="site-header sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between gap-6">
 
-      <!-- Logo -->
       <a href="/" class="flex items-center gap-2.5" style="text-decoration:none;" aria-label="Pingraph home">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#06B6D4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M3 12h4l2-5 4 10 2-5h6"/>
@@ -241,228 +72,279 @@
         <span class="logo-text">Pingraph</span>
       </a>
 
-      <!-- GitHub link -->
-      <a href="https://github.com/vdw/pingraph" target="_blank" rel="noopener noreferrer" class="gh-link">
-        <!-- GitHub mark -->
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-        </svg>
-        View on GitHub
-      </a>
+      <nav class="flex items-center gap-6" aria-label="Main">
+        <a href="#checks" class="nav-link hidden sm:inline">Features</a>
+        <a href="#quickstart" class="nav-link hidden sm:inline">Quick start</a>
+        <a href="https://github.com/vdw/pingraph" target="_blank" rel="noopener noreferrer" class="gh-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          View on GitHub
+        </a>
+      </nav>
     </div>
   </header>
 
-  <!-- ══════════════════════════════════════════
-       HERO
-  ══════════════════════════════════════════ -->
-  <section class="relative overflow-hidden hero-glow grain flex-grow-0" style="position:relative;">
-    <div class="max-w-6xl mx-auto px-6 pt-24 pb-16 text-center">
+  <main>
+    <!-- ══════════════════════════════════════════
+         HERO
+    ══════════════════════════════════════════ -->
+    <section class="hero-glow grain overflow-hidden">
+      <div class="max-w-6xl mx-auto px-6 pt-24 pb-16 text-center">
 
-      <!-- Eyebrow badges -->
-      <div class="flex items-center justify-center gap-3 mb-7 flex-wrap">
-        <span class="badge badge-emerald">
-          <span style="width:6px;height:6px;background:#10B981;border-radius:50%;display:inline-block;"></span>
-          Open Source
-        </span>
-        <span class="badge badge-cyan">Rails 8 · SQLite · Docker</span>
+        <div class="flex items-center justify-center gap-3 mb-7 flex-wrap">
+          <span class="badge badge-emerald"><span class="badge-dot"></span>Open Source · MIT</span>
+          <span class="badge badge-cyan">Docker · SQLite</span>
+        </div>
+
+        <h1 class="hero-heading text-4xl sm:text-5xl lg:text-6xl max-w-4xl mx-auto mb-6 text-balance">
+          Latency graphs and <span class="accent">uptime monitoring</span> in one self-hosted box.
+        </h1>
+
+        <p class="text-lg max-w-2xl mx-auto mb-10 muted" style="line-height:1.7;">
+          Pingraph combines SmokePing-style latency charts with Uptime Kuma-style checks, alerts and
+          public status pages. It runs as a single Docker container with SQLite, and you set
+          everything up in the web UI.
+        </p>
+
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
+          <a href="https://github.com/vdw/pingraph" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+            Get Started on GitHub
+          </a>
+          <a href="#quickstart" class="btn btn-secondary">
+            Quick Start
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+
+        <div class="screen-frame max-w-4xl mx-auto rounded-2xl overflow-hidden">
+          <div class="browser-bar">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-amber"></span>
+            <span class="dot dot-green"></span>
+            <span class="url-bar">https://pingraph.local</span>
+          </div>
+          <div class="screen-body">
+            <picture>
+              <source srcset="/assets/dashboard-screenshot.webp" type="image/webp">
+              <img src="/assets/dashboard-screenshot.png" width="1058" height="659" fetchpriority="high"
+                   alt="Pingraph host page for Cloudflare DNS (1.1.1.1): a latency-over-time chart with a min/max band, and a table of recent probes with average, min and max round-trip time and packet loss">
+            </picture>
+          </div>
+        </div>
       </div>
+    </section>
 
-      <!-- Heading -->
-      <h1 class="hero-heading text-4xl sm:text-5xl lg:text-6xl max-w-3xl mx-auto mb-5">
-        Modern Network Latency<br>
-        <span style="color:var(--cyan);">Monitoring</span> for Homelabs.
-      </h1>
-
-      <!-- Subheading -->
-      <p class="text-lg max-w-xl mx-auto mb-10" style="color:var(--muted);line-height:1.7;">
-        A self-hosted alternative to SmokePing. Built with Rails&nbsp;8, visualizations in minutes.
-        Zero configuration files.
+    <!-- ══════════════════════════════════════════
+         CHECKS
+    ══════════════════════════════════════════ -->
+    <section id="checks" class="max-w-6xl mx-auto px-6 py-20">
+      <h2 class="section-heading text-center text-2xl sm:text-3xl font-bold mb-3">What Pingraph checks</h2>
+      <p class="text-center mb-12 max-w-2xl mx-auto muted">
+        Every host has its own check interval, a latency threshold for the degraded state, and a
+        confirmation streak, so a single dropped packet doesn't page anyone.
       </p>
 
-      <!-- CTA buttons -->
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
-        <a href="https://github.com/vdw/pingraph"
-           target="_blank" rel="noopener noreferrer"
-           class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm"
-           style="background:var(--cyan);color:#0a0f1a;transition:opacity 0.15s ease,transform 0.15s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 0 24px rgba(6,182,212,0.35),0 4px 12px rgba(0,0,0,0.3);"
-           onmouseover="this.style.transform='translateY(-2px)';this.style.opacity='0.9'"
-           onmouseout="this.style.transform='';this.style.opacity='1'"
-           onmousedown="this.style.transform='translateY(0)'"
-           onfocus="this.style.outline='2px solid #06B6D4';this.style.outlineOffset='3px'"
-           onblur="this.style.outline=''">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-          </svg>
-          Get Started on GitHub
-        </a>
-        <a href="#quickstart"
-           class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm"
-           style="background:transparent;color:var(--text);border:1px solid var(--border);transition:border-color 0.15s ease,background 0.15s ease,transform 0.15s cubic-bezier(0.34,1.56,0.64,1);"
-           onmouseover="this.style.borderColor='rgba(6,182,212,0.4)';this.style.background='rgba(6,182,212,0.06)';this.style.transform='translateY(-2px)'"
-           onmouseout="this.style.borderColor='';this.style.background='';this.style.transform=''"
-           onfocus="this.style.outline='2px solid #06B6D4';this.style.outlineOffset='3px'"
-           onblur="this.style.outline=''">
-          Quick Start
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </a>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div class="feature-card">
+          <div class="icon-tile icon-cyan">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <h3>Ping (ICMP)</h3>
+          <p>Min, average and max round-trip time and packet loss from five packets per check.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="icon-tile icon-emerald">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+          </div>
+          <h3>HTTP(S)</h3>
+          <p>Expected status, a keyword that must be present or absent, redirects, any method with headers, body and basic auth, and certificate expiry.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="icon-tile icon-amber">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+          </div>
+          <h3>TCP port</h3>
+          <p>Checks that a port accepts connections and records how long the connection took.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="icon-tile icon-red">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+          </div>
+          <h3>DNS</h3>
+          <p>Resolves A, AAAA, CNAME, MX, NS or TXT records through your own resolver or the system's, and can check the answer.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="icon-tile icon-cyan">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg>
+          </div>
+          <h3>Docker</h3>
+          <p>A container is running and healthy, checked through the Docker socket or a socket proxy.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="icon-tile icon-emerald">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          </div>
+          <h3>Redis</h3>
+          <p><code>PING</code> with an optional password. Also works with Valkey and KeyDB.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="icon-tile icon-amber">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <h3>Push (heartbeat)</h3>
+          <p>Cron jobs, backups and scripts call a URL when they run, and the host goes down when the calls stop. Uses Uptime Kuma's push URL format.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="icon-tile icon-red">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <h3>Speed tests</h3>
+          <p>On-demand iperf3 throughput tests against any host running <code>iperf3 -s</code>.</p>
+        </div>
       </div>
+    </section>
 
-      <!-- Dashboard screenshot mockup -->
-      <div class="max-w-4xl mx-auto rounded-2xl overflow-hidden"
-           style="border:1px solid var(--border);box-shadow:0 0 0 1px rgba(6,182,212,0.1),0 24px 64px rgba(0,0,0,0.7),0 4px 16px rgba(0,0,0,0.5);">
-        <!-- Browser chrome -->
-        <div class="browser-bar">
-          <span class="dot dot-red"></span>
-          <span class="dot dot-amber"></span>
-          <span class="dot dot-green"></span>
-          <span class="url-bar">https://pingraph.local</span>
-        </div>
-        <!-- Screenshot placeholder -->
-        <div style="background:#131e2e;position:relative;overflow:hidden;">
-          <img src="assets/dashboard-screenshot.png"
-            alt="Pingraph dashboard screenshot"
-               style="width:100%;display:block;opacity:0.9;"
-               loading="lazy">
-          <!-- Teal accent line on top -->
-          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#06B6D4,transparent);"></div>
-        </div>
-      </div>
-    </div>
-  </section>
+    <hr class="divider max-w-6xl mx-auto">
 
-  <!-- ══════════════════════════════════════════
-       FEATURE GRID
-  ══════════════════════════════════════════ -->
-  <section class="max-w-6xl mx-auto px-6 py-20">
-    <h2 class="text-center text-2xl font-bold mb-3" style="letter-spacing:-0.02em;">Everything you need. Nothing you don't.</h2>
-    <p class="text-center mb-12 text-sm" style="color:var(--muted);">Designed for engineers who run their own infrastructure.</p>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-
-      <!-- Rails 8 Powered -->
-      <div class="feature-card">
-        <div class="mb-4 inline-flex items-center justify-center w-10 h-10 rounded-xl" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.2);">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-          </svg>
-        </div>
-        <h3 class="font-semibold text-sm mb-2" style="letter-spacing:-0.01em;">Rails 8 Powered</h3>
-        <p class="text-sm leading-relaxed" style="color:var(--muted);line-height:1.65;">
-          Built on Rails 8's native authentication, Solid Queue, and Solid Cache — no extra infra needed.
+    <!-- ══════════════════════════════════════════
+         LATENCY · ALERTS · STATUS PAGES
+    ══════════════════════════════════════════ -->
+    <section class="max-w-6xl mx-auto px-6 py-20 grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <div class="detail">
+        <h2 class="section-heading text-xl font-bold mb-4">Latency history, SmokePing style</h2>
+        <p>
+          Each ping check stores min, average and max round-trip time plus packet loss, and the host
+          page charts them over time with a band for the spread. You see slow links and lossy Wi-Fi
+          as trends, not just as up or down.
         </p>
+        <ul class="check-list mt-6">
+          <li><strong>Degraded state</strong> when latency crosses the host's threshold (350&nbsp;ms by default) or packet loss climbs</li>
+          <li><strong>Grouped dashboard</strong> by service, location or team</li>
+          <li><strong>30, 60 or 90 days</strong> of history</li>
+        </ul>
       </div>
 
-      <!-- Docker Ready -->
-      <div class="feature-card">
-        <div class="mb-4 inline-flex items-center justify-center w-10 h-10 rounded-xl" style="background:rgba(6,182,212,0.10);border:1px solid rgba(6,182,212,0.2);">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#06B6D4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-            <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
-            <line x1="12" y1="12" x2="12" y2="16"/>
-            <line x1="10" y1="14" x2="14" y2="14"/>
-          </svg>
-        </div>
-        <h3 class="font-semibold text-sm mb-2" style="letter-spacing:-0.01em;">Docker Ready</h3>
-        <p class="text-sm leading-relaxed" style="color:var(--muted);line-height:1.65;">
-          Single container with a pre-built image. Set
-          <code style="font-family:'Fira Code',monospace;color:var(--cyan);font-size:0.8em;">SOLID_QUEUE_IN_PUMA=true</code>,
-          <code style="font-family:'Fira Code',monospace;color:var(--cyan);font-size:0.8em;">NET_RAW</code>, and a storage volume. Keys are generated on first boot.
+      <div class="detail">
+        <h2 class="section-heading text-xl font-bold mb-4">Alerts that wait for a real outage</h2>
+        <p>
+          Pingraph notifies you when a host goes down, becomes degraded or recovers. Status only
+          changes after a streak of problem checks in a row (two by default, set per host), so one
+          lost packet doesn't wake anyone up.
         </p>
+        <ul class="check-list mt-6">
+          <li><strong>Slack, email, Telegram, ntfy</strong> and a generic webhook</li>
+          <li><strong>Certificate expiry warnings</strong> for HTTPS checks</li>
+          <li><strong>Retries and a delivery log</strong>, plus a test button for each channel</li>
+        </ul>
       </div>
 
-      <!-- Zero Config -->
-      <div class="feature-card">
-        <div class="mb-4 inline-flex items-center justify-center w-10 h-10 rounded-xl" style="background:rgba(16,185,129,0.10);border:1px solid rgba(16,185,129,0.2);">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          </svg>
-        </div>
-        <h3 class="font-semibold text-sm mb-2" style="letter-spacing:-0.01em;">Zero Config</h3>
-        <p class="text-sm leading-relaxed" style="color:var(--muted);line-height:1.65;">
-          No flat files, no YAML configs. Manage hosts and groups entirely from the web UI.
+      <div class="detail">
+        <h2 class="section-heading text-xl font-bold mb-4">Public status pages</h2>
+        <p>
+          Mark a group as public and Pingraph serves a status page for it, with no login needed. Uptime
+          is measured over the time Pingraph was actually monitoring, so its own downtime never counts
+          as uptime.
         </p>
+        <ul class="check-list mt-6">
+          <li><strong>Current status</strong> for every host in the group</li>
+          <li><strong>Last 24 hours</strong> of uptime in 30-minute bars</li>
+          <li><strong>Incident history</strong> for the past week</li>
+        </ul>
       </div>
+    </section>
 
-      <!-- Open Source -->
-      <div class="feature-card">
-        <div class="mb-4 inline-flex items-center justify-center w-10 h-10 rounded-xl" style="background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.2);">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="2" y1="12" x2="22" y2="12"/>
-            <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
-          </svg>
-        </div>
-        <h3 class="font-semibold text-sm mb-2" style="letter-spacing:-0.01em;">Open Source</h3>
-        <p class="text-sm leading-relaxed" style="color:var(--muted);line-height:1.65;">
-          MIT licensed. Fork it, self-host it, adapt it to your homelab without restrictions.
-        </p>
-      </div>
-    </div>
-  </section>
+    <hr class="divider max-w-6xl mx-auto">
 
-  <hr class="divider max-w-6xl mx-auto" style="margin-left:auto;margin-right:auto;border-color:var(--border);">
-
-  <!-- ══════════════════════════════════════════
-       CODE BLOCK / QUICK START
-  ══════════════════════════════════════════ -->
-  <section id="quickstart" class="max-w-6xl mx-auto px-6 py-20">
-    <div class="max-w-2xl mx-auto">
-      <h2 class="text-2xl font-bold mb-2 text-center" style="letter-spacing:-0.02em;">Quick Start</h2>
-      <p class="text-sm text-center mb-10" style="color:var(--muted);">Up and running in under a minute.</p>
-
-      <div class="terminal" role="region" aria-label="Quick start terminal commands">
-        <div class="terminal-bar">
-          <span class="dot dot-red"></span>
-          <span class="dot dot-amber"></span>
-          <span class="dot dot-green"></span>
-          <span class="terminal-label">bash</span>
-        </div>
-        <div class="terminal-body">
-          <p><span class="prompt">$&nbsp;</span><span class="cmd">docker pull <span class="flag">ghcr.io/vdw/pingraph:latest</span></span></p>
-          <p style="margin-top:0.5rem;"><span class="prompt">$&nbsp;</span><span class="cmd">docker run -d \</span></p>
-          <p style="padding-left:1.5rem;"><span class="cmd">  --name <span class="flag">pingraph</span> \</span></p>
-          <p style="padding-left:1.5rem;"><span class="cmd">  --cap-add <span class="flag">NET_RAW</span> \</span></p>
-          <p style="padding-left:1.5rem;"><span class="cmd">  -p <span class="flag">3000:80</span> \</span></p>
-          <p style="padding-left:1.5rem;"><span class="cmd">  -e <span class="flag">SOLID_QUEUE_IN_PUMA=true</span> \</span></p>
-          <p style="padding-left:1.5rem;"><span class="cmd">  -v <span class="flag">pingraph_storage:/rails/storage</span> \</span></p>
-          <p style="padding-left:1.5rem;"><span class="cmd">  ghcr.io/vdw/pingraph:latest</span></p>
-          <p style="margin-top:1rem;color:#4ade80;font-size:0.82rem;">✓ Open http://localhost:3000 — sign in as admin@pingraph.local / pingraph123 and choose a new password.</p>
-        </div>
-      </div>
-
-      <!-- Tip -->
-      <p class="mt-5 text-xs text-center" style="color:var(--muted);">
-        Requires <code style="font-family:'Fira Code',monospace;color:var(--cyan);">SOLID_QUEUE_IN_PUMA=true</code>, a persistent storage volume, and
-        <code style="font-family:'Fira Code',monospace;color:var(--cyan);">NET_RAW</code> capability to send ICMP packets.
-        See the <a href="https://github.com/vdw/pingraph#docker" class="footer-link" style="text-decoration:underline;text-underline-offset:3px;">Docker docs</a> for compose examples.
+    <!-- ══════════════════════════════════════════
+         SELF-HOSTING
+    ══════════════════════════════════════════ -->
+    <section class="max-w-6xl mx-auto px-6 py-20">
+      <h2 class="section-heading text-center text-2xl sm:text-3xl font-bold mb-3">Built to self-host</h2>
+      <p class="text-center mb-12 max-w-2xl mx-auto muted">
+        Made for homelabs and small teams who run their own infrastructure and don't want another
+        stack to maintain.
       </p>
-    </div>
-  </section>
 
-  <hr class="divider" style="border-color:var(--border);max-width:72rem;margin:0 auto;">
+      <ul class="check-list check-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-5 max-w-5xl mx-auto">
+        <li><strong>One container.</strong> Web UI, scheduler and workers in a single image, with SQLite in one volume. No Postgres or Redis to run.</li>
+        <li><strong>No config files.</strong> Hosts, groups, alerts and settings all live in the web UI.</li>
+        <li><strong>Minimal privileges.</strong> Ping needs only the <code>NET_RAW</code> capability. Secrets are generated on first boot and kept in the volume.</li>
+        <li><strong>Several users with 2FA.</strong> Authenticator-app codes with one-time recovery codes.</li>
+        <li><strong>Watches itself.</strong> <code>GET /health</code> returns 503 when checks stop, and the Docker health check uses it.</li>
+        <li><strong>Open source.</strong> MIT licensed, built with Rails&nbsp;8, Solid Queue and Hotwire.</li>
+      </ul>
+    </section>
+
+    <hr class="divider max-w-6xl mx-auto">
+
+    <!-- ══════════════════════════════════════════
+         QUICK START
+    ══════════════════════════════════════════ -->
+    <section id="quickstart" class="max-w-6xl mx-auto px-6 py-20">
+      <div class="max-w-2xl mx-auto">
+        <h2 class="section-heading text-2xl sm:text-3xl font-bold mb-2 text-center">Quick Start</h2>
+        <p class="text-center mb-10 muted">Up and running in under a minute.</p>
+
+        <div class="terminal" role="region" aria-label="Quick start terminal commands">
+          <div class="terminal-bar">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-amber"></span>
+            <span class="dot dot-green"></span>
+            <span class="terminal-label">bash</span>
+          </div>
+          <div class="terminal-body">
+<pre><span class="prompt">$ </span><span class="cmd">docker run -d \
+    --name <span class="flag">pingraph</span> \
+    --cap-add <span class="flag">NET_RAW</span> \
+    -p <span class="flag">3000:80</span> \
+    -e <span class="flag">SOLID_QUEUE_IN_PUMA=true</span> \
+    -v <span class="flag">pingraph_storage:/rails/storage</span> \
+    ghcr.io/vdw/pingraph:latest</span></pre>
+            <p class="ok mt-4">✓ Open http://localhost:3000, sign in as <!--email_off-->admin@pingraph.local<!--/email_off--> / pingraph123 and choose a new password.</p>
+          </div>
+        </div>
+
+        <p class="mt-5 text-xs text-center muted">
+          Requires <code>SOLID_QUEUE_IN_PUMA=true</code>, a persistent storage volume, and the
+          <code>NET_RAW</code> capability to send ICMP packets. See the
+          <a href="https://github.com/vdw/pingraph#docker-compose-example" class="footer-link text-link">Docker Compose example</a>
+          to run it with Compose.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <hr class="divider w-full max-w-6xl mx-auto">
 
   <!-- ══════════════════════════════════════════
        FOOTER
   ══════════════════════════════════════════ -->
   <footer class="max-w-6xl mx-auto w-full px-6 py-10">
     <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-
-      <!-- Left: logo + tagline -->
       <div class="flex items-center gap-2.5">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06B6D4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M3 12h4l2-5 4 10 2-5h6"/>
         </svg>
-        <span class="text-sm" style="color:var(--muted);">Built for the homelab community.</span>
+        <span class="text-sm muted">Built for the homelab community.</span>
       </div>
 
-      <!-- Right: links -->
-      <div class="flex items-center gap-5 text-sm" style="color:var(--muted);">
+      <div class="flex items-center flex-wrap justify-center gap-5 text-sm muted">
         <a href="https://github.com/vdw/pingraph" class="footer-link" target="_blank" rel="noopener noreferrer">GitHub</a>
-        <span style="color:var(--border);">·</span>
         <a href="https://github.com/vdw/pingraph/blob/main/README.md" class="footer-link" target="_blank" rel="noopener noreferrer">Docs</a>
-        <span style="color:var(--border);">·</span>
+        <a href="https://github.com/vdw/pingraph/pkgs/container/pingraph" class="footer-link" target="_blank" rel="noopener noreferrer">Docker image</a>
         <span>MIT &copy; 2026 Pingraph</span>
       </div>
     </div>
