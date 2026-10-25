@@ -1,0 +1,78 @@
+<% content_for :title, "Users" %>
+
+<div class="w-full max-w-4xl">
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Users</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Everyone who can sign in. All users can change everything, including other users.</p>
+    </div>
+    <%= link_to "+ Add User", new_user_path,
+          class: "inline-flex items-center rounded-lg bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors" %>
+  </div>
+
+  <% if (temporary = flash[:temporary_password]).present? %>
+    <div class="mb-6 rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-900/20 p-4 text-sm text-amber-800 dark:text-amber-200">
+      <p class="font-semibold">Temporary password for <%= temporary["email_address"] %></p>
+      <code id="temporary-password" class="mt-2 block font-mono text-base text-gray-900 dark:text-gray-100 select-all"><%= temporary["password"] %></code>
+      <p class="mt-2">Send it to them privately. It won't be shown again, and they'll choose their own password when they sign in.</p>
+    </div>
+  <% end %>
+
+  <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+    <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700">
+      <thead class="bg-gray-50 dark:bg-gray-700/50">
+        <tr>
+          <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
+          <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Two-factor</th>
+          <th class="py-3 px-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">Added</th>
+          <th class="py-3 px-4"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+        <% @users.each do |user| %>
+          <tr>
+            <td class="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
+              <%= user.email_address %>
+              <% if user == Current.user %>
+                <span class="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">(you)</span>
+              <% end %>
+              <% if user.must_change_password? %>
+                <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">Temporary password</span>
+              <% end %>
+            </td>
+            <td class="py-3 px-4 text-sm">
+              <% if user.two_factor_enabled? %>
+                <span class="inline-flex items-center rounded-full bg-green-50 dark:bg-green-900/20 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">On</span>
+              <% else %>
+                <span class="text-gray-400 dark:text-gray-500">Off</span>
+              <% end %>
+            </td>
+            <td class="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
+              <%= local_time(user.created_at, format: :short) %>
+            </td>
+            <td class="py-3 px-4 text-right">
+              <% if user == Current.user %>
+                <%= link_to "Account", edit_account_path,
+                      class: "rounded-md px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" %>
+              <% else %>
+                <div class="inline-flex flex-wrap justify-end items-center gap-1">
+                  <%= button_to "Reset password", reset_password_user_path(user),
+                        class: "rounded-md px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer",
+                        data: { turbo_confirm: "Reset the password for #{user.email_address}? They'll be signed out and get a temporary password." } %>
+                  <% if user.two_factor_enabled? %>
+                    <%= button_to "Turn off 2FA", two_factor_user_path(user), method: :delete,
+                          class: "rounded-md px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer",
+                          data: { turbo_confirm: "Turn off two-factor authentication for #{user.email_address}?" } %>
+                  <% end %>
+                  <%= button_to "Remove", user, method: :delete,
+                        class: "rounded-md px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors cursor-pointer",
+                        data: { turbo_confirm: "Remove #{user.email_address}? They'll be signed out and can't sign in again." } %>
+                </div>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

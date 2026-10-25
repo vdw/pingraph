@@ -18,6 +18,25 @@ namespace :pingraph do
     puts "You'll be asked to change it at your next sign-in. All sessions were signed out."
   end
 
+  desc "Turn off two-factor authentication for a user who lost their phone and recovery codes"
+  task :disable_two_factor, [ :email ] => :environment do |_task, args|
+    with_two_factor = User.where.not(otp_enabled_at: nil)
+    user =
+      if args[:email].present?
+        User.find_by(email_address: args[:email].strip.downcase)
+      elsif with_two_factor.one?
+        with_two_factor.first
+      end
+
+    unless user
+      users = with_two_factor.order(:email_address).pluck(:email_address)
+      abort "No such user. Run: bin/rails \"pingraph:disable_two_factor[EMAIL]\" with one of: #{users.join(', ').presence || '(nobody has it on)'}"
+    end
+
+    user.disable_two_factor!
+    puts "Two-factor authentication is off for #{user.email_address}. They can sign in with their password and turn it on again."
+  end
+
   desc "Replace storage/encryption.key with a new key and re-encrypt all secrets (restart Pingraph afterwards)"
   task rotate_encryption_key: :environment do
     count = EncryptionKeyRotation.new.call

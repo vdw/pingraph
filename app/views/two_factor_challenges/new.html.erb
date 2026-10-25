@@ -1,0 +1,36 @@
+<div class="min-h-[70vh] flex items-center justify-center">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">Pingraph</h1>
+      <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Network latency monitor</p>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-8">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Two-factor authentication</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+        Enter the 6-digit code from your authenticator app, or one of your recovery codes.
+      </p>
+
+      <%= form_with url: two_factor_challenge_path, class: "space-y-5" do |form| %>
+        <div>
+          <%= form.label :code, "Code", class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
+          <%= form.text_field :code, required: true, autofocus: true,
+                autocomplete: "one-time-code", inputmode: "text", maxlength: 20,
+                placeholder: "123456",
+                class: "block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 font-mono tracking-widest shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" %>
+        </div>
+
+        <%= form.submit "Verify",
+              class: "w-full rounded-md bg-indigo-600 hover:bg-indigo-500 px-4 py-2.5 text-white font-semibold cursor-pointer transition-colors" %>
+      <% end %>
+
+      <p class="text-sm text-center text-gray-400 dark:text-gray-500 mt-4">
+        Lost your phone and your recovery codes? Another user can turn off two-factor authentication for you
+        on the Users page, or run <code class="font-mono text-xs">bin/rails pingraph:disable_two_factor</code> on the server.
+      </p>
+      <p class="text-sm text-center mt-2">
+        <%= link_to "Back to sign in", new_session_path, class: "text-indigo-600 hover:text-indigo-500" %>
+      </p>
+    </div>
+  </div>
+</div>

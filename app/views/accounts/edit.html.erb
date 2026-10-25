@@ -70,4 +70,8 @@
       </div>
     <% end %>
   </div>
+
+  <% unless @user.must_change_password? %>
+    <%= render "two_factor", user: @user %>
+  <% end %>
 </div>

@@ -1,0 +1,47 @@
+<% content_for :title, "Set up two-factor authentication" %>
+
+<%
+  input_classes = "block w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+  label_classes = "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+%>
+
+<div class="max-w-xl">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Set up two-factor authentication</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+      After your password, signing in will also ask for a code from an authenticator app
+      such as 2FAS, Aegis, Google Authenticator, 1Password or Bitwarden.
+    </p>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-6">
+    <div>
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">1. Scan this QR code with the app</h2>
+      <%# White background in dark mode too, so phone cameras can read it. %>
+      <div class="inline-block rounded-lg bg-white p-3 border border-gray-200">
+        <%= image_tag @qr_code.as_png(size: 384, border_modules: 0).to_data_url, alt: "QR code for your authenticator app", class: "w-48 h-48" %>
+      </div>
+      <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+        Can't scan it? Enter this key in the app instead:
+        <code id="otp-secret" class="block mt-1 font-mono text-sm text-gray-800 dark:text-gray-200 select-all break-all"><%= @secret.scan(/.{1,4}/).join(" ") %></code>
+      </p>
+    </div>
+
+    <%= form_with url: account_two_factor_path, method: :post, class: "space-y-5" do |form| %>
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200">2. Enter the code it shows</h2>
+      <div>
+        <%= form.label :code, "Code from the app", class: label_classes %>
+        <%= form.text_field :code, required: true, autofocus: true, autocomplete: "one-time-code", inputmode: "numeric",
+              maxlength: 7, placeholder: "123456", class: "#{input_classes} font-mono tracking-widest" %>
+      </div>
+      <div>
+        <%= form.label :password_challenge, "Current password", class: label_classes %>
+        <%= form.password_field :password_challenge, required: true, autocomplete: "current-password", maxlength: 72, class: input_classes %>
+      </div>
+      <div class="flex items-center gap-3">
+        <%= form.submit "Turn on", class: "rounded-lg bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm cursor-pointer transition-colors" %>
+        <%= link_to "Cancel", edit_account_path, class: "text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" %>
+      </div>
+    <% end %>
+  </div>
+</div>

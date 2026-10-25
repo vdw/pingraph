@@ -75,6 +75,12 @@
                 </svg>
                 <span>Account</span>
               <% end %>
+              <%= link_to users_path, class: "hidden sm:flex items-center gap-1 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors rounded-md p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800" do %>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+                <span>Users</span>
+              <% end %>
             <% end %>
 
             <button data-action="dark-mode#toggle"
@@ -120,6 +126,13 @@
                   <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                 </svg>
                 <span>Account</span>
+              <% end %>
+              <%= link_to users_path,
+                    class: "rounded-md px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors flex items-center gap-2" do %>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+                <span>Users</span>
               <% end %>
 
               <%= button_to "Sign out", session_path, method: :delete,
@@ -172,7 +185,8 @@
 
     <%# Flash messages %>
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
-      <% flash.each do |type, message| %>
+      <%# Other keys (recovery codes, temporary passwords) are rendered by their own pages. %>
+      <% flash.to_hash.slice("notice", "alert").each do |type, message| %>
         <%# Notices fade away; errors stay until clicked so they can be read. %>
         <div class="rounded-md px-4 py-3 text-sm font-medium mb-3 cursor-pointer
           <%= type.to_s == 'notice' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' %>"

@@ -34,6 +34,10 @@ Monitor latency trends, packet loss, and service availability in real-time with 
 - **Historical Data** — 90-day retention with configurable cleanup (30/60/90 days)
 - **Grouped Organization** — Organize hosts by service, location, or team
 
+### Accounts
+- **Several users** — Add and remove people from the Users page; new users get a temporary password
+- **Two-factor authentication** — Codes from any authenticator app, with one-time recovery codes
+
 ---
 
 ## Use Cases
@@ -164,6 +168,14 @@ Toggle alerting per host with **Send notifications for this host** on the host's
 
 ---
 
+## Users and Two-Factor Authentication
+
+**Users:** The Users page lists everyone who can sign in. *Add user* creates an account with a temporary password, shown once, which they replace at their first sign-in. Every user can change everything, including other users: there are no roles. You can reset another user's password (they're signed out everywhere), turn off their two-factor authentication, or remove them; your own account is changed on the Account page, and the last user can't be removed.
+
+**Two-factor authentication:** On the Account page, choose *Set up*, scan the QR code with an authenticator app (2FAS, Aegis, Google Authenticator, 1Password, Bitwarden and others), and confirm with a code and your password. You then get 10 recovery codes: each signs you in once if you lose your phone, so store them somewhere safe. From then on, signing in asks for a code after your password. A code can't be used twice, and both turning two-factor off and replacing the recovery codes need your password. The secret is encrypted at rest like the notification secrets.
+
+---
+
 ## How It Works
 
 **Polling:** Every minute, Pingraph schedules each host's checks for the coming minute on exact slots, so a host set to 30 seconds is checked every 30 seconds (minimum 10 seconds). If the queue falls behind, late checks are skipped rather than piling up.
@@ -286,6 +298,7 @@ WantedBy=multi-user.target
 ### Production Checklist
 
 - [ ] Change the default admin password (you're prompted at first sign-in)
+- [ ] Turn on two-factor authentication (Account page), especially if Pingraph is reachable from the internet
 - [ ] Keep `storage/` persistent and back it up: it holds the database and the generated keys
 - [ ] Configure TIME_ZONE for your location
 - [ ] Set up persistent volume or backup strategy for database
@@ -329,6 +342,11 @@ docker exec pingraph bin/rails pingraph:reset_password                      # wh
 docker exec pingraph bin/rails "pingraph:reset_password[you@example.com]"
 ```
 With Email (SMTP) configured in Settings, the sign-in page also offers "Forgot password?".
+
+Lost your phone and your recovery codes? Another user can turn off two-factor authentication for you on the Users page, or on the server:
+```bash
+docker exec pingraph bin/rails "pingraph:disable_two_factor[you@example.com]"
+```
 
 ### Hosts not probing?
 - Look for the red "Hosts are not being checked" banner: the background worker isn't running (`SOLID_QUEUE_IN_PUMA=true`)

@@ -1,0 +1,33 @@
+<% content_for :title, "Add user" %>
+
+<div class="max-w-xl">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Add user</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+      Pingraph creates a temporary password for you to pass on. They choose their own the first time they sign in.
+    </p>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+    <%= form_with model: @user, url: users_path do |form| %>
+      <% if @user.errors.any? %>
+        <div class="mb-5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3">
+          <ul class="list-disc ml-4 text-sm text-red-600 dark:text-red-400 space-y-0.5">
+            <% @user.errors.each do |error| %>
+              <li><%= error.full_message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <%= form.label :email_address, "Email", class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
+      <%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "off",
+            class: "block w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" %>
+
+      <div class="mt-6 flex items-center gap-3">
+        <%= form.submit "Add user", class: "rounded-lg bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm cursor-pointer transition-colors" %>
+        <%= link_to "Cancel", users_path, class: "text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200" %>
+      </div>
+    <% end %>
+  </div>
+</div>
