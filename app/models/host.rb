@@ -12,6 +12,15 @@ class Host < ApplicationRecord
   MAX_REDIRECTS_LIMIT = 20
   # One "Name: value" per line; the name is an HTTP token (RFC 9110).
   REQUEST_HEADER_LINE = /\A[!#$%&'*+.^_`|~0-9A-Za-z-]+:[^\r\n]*\z/
+  DNS_RECORD_TYPES = %w[A AAAA CNAME MX NS TXT].freeze
+  # Docker container names ([a-zA-Z0-9][a-zA-Z0-9_.-]+) and IDs; also safe inside a URL path.
+  DOCKER_CONTAINER = /\A[a-zA-Z0-9][a-zA-Z0-9_.-]*\z/
+  DEFAULT_DOCKER_HOST = "unix:///var/run/docker.sock".freeze
+  DEFAULT_REDIS_PORT = 6379
+  PROBE_TYPE_LABELS = {
+    "icmp" => "Ping (ICMP)", "http" => "HTTP(S)", "tcp" => "TCP port", "dns" => "DNS",
+    "push" => "Push (heartbeat)", "docker" => "Docker container", "redis" => "Redis"
+  }.freeze
 
   belongs_to :group
   # delete_all: one DELETE statement instead of instantiating ~130k rows per busy host.
@@ -19,7 +28,8 @@ class Host < ApplicationRecord
   has_many :speed_tests, dependent: :delete_all
   has_many :notification_deliveries, dependent: :nullify
 
-  # HTTP check credentials (see Setting for how keys are provisioned).
+  # HTTP check credentials (see Setting for how keys are provisioned). basic_auth_user and
+  # basic_auth_password are also the Redis AUTH username (optional) and password.
   encrypts :request_headers
   encrypts :request_body
   encrypts :basic_auth_password
@@ -27,7 +37,11 @@ class Host < ApplicationRecord
   enum :probe_type, {
     icmp: 0,
     http: 1,
-    tcp: 2
+    tcp: 2,
+    dns: 3,
+    push: 4,
+    docker: 5,
+    redis: 6
   }, default: :icmp
 
   enum :status, {
@@ -48,12 +62,12 @@ class Host < ApplicationRecord
   }, default: :unknown, prefix: :last_notified
 
   validates :name, presence: true
-  validates :address, presence: true
+  validates :address, presence: true, unless: :push?
   validate :address_unique_within_group
   validates :interval, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 10 }
   validates :latency_threshold_ms, numericality: { greater_than: 0 }
   validates :failure_threshold, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: MAX_FAILURE_THRESHOLD }
-  validates :port, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 65_535 }, if: :tcp?
+  validates :port, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 65_535 }, if: -> { tcp? || redis? }
   validates :expected_status_code, numericality: { only_integer: true, greater_than_or_equal_to: 100, less_than_or_equal_to: 599 }, if: :http?
   validates :expected_status_code_range, inclusion: { in: %w[exact 2xx 3xx 4xx 5xx] }, if: :http?
   validates :verify_ssl, inclusion: { in: [ true, false ] }, if: :http?
@@ -63,12 +77,18 @@ class Host < ApplicationRecord
   validates :max_redirects, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: MAX_REDIRECTS_LIMIT }, if: :http?
   validates :ssl_expiry_warn_days, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 365 }, allow_nil: true, if: :http?
   validate :http_options_must_be_consistent, if: :http?
+  validates :dns_record_type, inclusion: { in: DNS_RECORD_TYPES }, if: :dns?
+  validate :dns_server_must_be_an_ip_address, if: :dns?
+  validate :docker_host_must_be_valid, if: :docker?
 
   validate :address_must_be_valid_http_url, if: :http?
-  validate :address_must_be_valid_network_target, unless: :http?
+  validate :address_must_be_valid_network_target, if: -> { icmp? || tcp? || redis? }
+  validate :address_must_be_valid_domain_name, if: :dns?
+  validate :address_must_be_valid_container, if: :docker?
   validate :probe_type_immutable, on: :update
 
   before_validation :normalize_probe_specific_fields
+  before_create :regenerate_push_token, if: :push?
   # A new interval takes effect on the next poller run instead of after the old one.
   before_save -> { self.next_probe_at = nil }, if: :interval_changed?
 
@@ -150,6 +170,40 @@ class Host < ApplicationRecord
     "https://#{value}"
   end
 
+  # What the check targets, for lists and headers.
+  def display_address
+    case probe_type.to_sym
+    when :push then "Push"
+    when :tcp, :redis then address.to_s.include?(":") ? "[#{address}]:#{port}" : "#{address}:#{port}"
+    when :dns then [ address, dns_record_type, (" @ #{dns_server}" if dns_server.present?) ].compact.join(" ").squeeze(" ")
+    when :docker then docker_host.present? ? "#{address} on #{docker_host}" : address
+    else address
+    end
+  end
+
+  def probe_type_label
+    PROBE_TYPE_LABELS.fetch(probe_type)
+  end
+
+  # The secret in the push URL. Changing it breaks every script using the old URL.
+  def regenerate_push_token
+    self.push_token = SecureRandom.base58(24)
+  end
+
+  # "unix:///var/run/docker.sock" => [:unix, "/var/run/docker.sock"]; "tcp://proxy:2375" =>
+  # [:tcp, "proxy", 2375]. nil when the value isn't one of those forms.
+  def docker_endpoint
+    uri = URI.parse(docker_host.presence || DEFAULT_DOCKER_HOST)
+    case uri.scheme
+    when "unix"
+      [ :unix, uri.path ] if uri.host.blank? && uri.path.to_s.start_with?("/")
+    when "tcp", "http"
+      [ :tcp, uri.hostname, uri.port ] if NetworkAddress.valid?(uri.hostname) && uri.port && uri.path.blank?
+    end
+  rescue URI::InvalidURIError
+    nil
+  end
+
   def speed_test_in_progress?
     speed_tests.in_progress.where(updated_at: (SpeedTest::STALE_AFTER.ago)..).exists?
   end
@@ -169,16 +223,18 @@ class Host < ApplicationRecord
   private
 
   def address_unique_within_group
-    return if address.blank? || group_id.blank?
+    return if address.blank? || group_id.blank? || push?
 
     scope = Host.where(group_id: group_id, address: address, probe_type: probe_type)
-    scope = scope.where(port: port) if tcp?
+    scope = scope.where(port: port) if tcp? || redis?
+    scope = scope.where(dns_record_type: dns_record_type, dns_server: dns_server) if dns?
+    scope = scope.where(docker_host: docker_host) if docker?
     scope = scope.where.not(id: id) if persisted?
 
     return unless scope.exists?
 
-    msg = tcp? ? "is already monitored on port #{port} in this group" \
-                : "is already monitored in this group with the same probe type"
+    msg = tcp? || redis? ? "is already monitored on port #{port} in this group" \
+                         : "is already monitored in this group with the same probe type"
     errors.add(:address, msg)
   end
 
@@ -189,15 +245,39 @@ class Host < ApplicationRecord
   def address_must_be_valid_network_target
     return if address.blank?
 
-    if tcp? && address.to_s.strip.match?(/\A[^:]+:\d+\z/)
+    if (tcp? || redis?) && address.to_s.strip.match?(/\A[^:]+:\d+\z/)
       errors.add(:address, "should not include a port; enter the port in the Port field")
     elsif !NetworkAddress.valid?(address)
       errors.add(:address, "must be a hostname or IP address (for example 192.168.1.10 or nas.local)")
     end
   end
 
+  def address_must_be_valid_domain_name
+    return if address.blank? || NetworkAddress.hostname?(address)
+
+    errors.add(:address, "must be a domain name (for example example.com)")
+  end
+
+  def address_must_be_valid_container
+    return if address.blank? || address.match?(DOCKER_CONTAINER)
+
+    errors.add(:address, "must be a container name or ID (for example nextcloud)")
+  end
+
+  def dns_server_must_be_an_ip_address
+    return if dns_server.blank? || NetworkAddress.ip?(dns_server)
+
+    errors.add(:dns_server, "must be an IP address (for example 1.1.1.1), or blank for the system resolver")
+  end
+
+  def docker_host_must_be_valid
+    return if docker_endpoint
+
+    errors.add(:docker_host, "must be unix:///path/to/docker.sock or tcp://host:port")
+  end
+
   def timeout_must_be_shorter_than_interval
-    return if timeout_seconds.blank? || interval.blank? || icmp?
+    return if timeout_seconds.blank? || interval.blank? || icmp? || push?
     return if timeout_seconds.to_i < interval.to_i
 
     errors.add(:timeout_seconds, "must be shorter than the interval")
@@ -233,15 +313,24 @@ class Host < ApplicationRecord
     self.timeout_seconds = 5 if timeout_seconds.blank?
     self.failure_threshold = DEFAULT_FAILURE_THRESHOLD if failure_threshold.blank?
 
-    if tcp?
+    self.address = nil if push?
+    self.port = DEFAULT_REDIS_PORT if redis? && port.blank?
+    self.port = nil unless tcp? || redis?
+    self.dns_server = dns_server.to_s.strip.presence
+    self.dns_record_type = dns_record_type.to_s.strip.upcase.presence || "A"
+    self.dns_expected_value = dns_expected_value.to_s.strip.presence
+    self.docker_host = docker_host.to_s.strip.presence
+
+    if redis?
+      self.basic_auth_user = basic_auth_user.to_s.strip.presence
+      self.basic_auth_password = basic_auth_password.presence
+    end
+
+    unless http?
       self.expected_status_code_range = "exact" if expected_status_code_range.blank?
       self.verify_ssl = true if verify_ssl.nil?
       return
     end
-
-    self.port = nil
-
-    return unless http?
 
     self.expected_status_code = 200 if expected_status_code.blank?
     self.expected_status_code_range = "exact" if expected_status_code_range.blank?

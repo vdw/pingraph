@@ -28,7 +28,7 @@
               <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">
                 <%= link_to host.name, host_path(host), class: "hover:text-indigo-600 dark:hover:text-indigo-400" %>
               </td>
-              <td class="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 font-mono"><%= host.address %></td>
+              <td class="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 font-mono"><%= host.display_address %></td>
               <td class="py-3 px-4">
                 <span class="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
                   <%= host.group.name %>

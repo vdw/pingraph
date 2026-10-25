@@ -213,4 +213,63 @@ class HostTest < ActiveSupport::TestCase
     host.failure_threshold = 1
     assert host.valid?
   end
+
+  test "push hosts need no address and get a push token" do
+    host = Host.create!(name: "Backups", probe_type: :push, address: "ignored", interval: 90_000, group: groups(:one))
+
+    assert_nil host.address
+    assert_equal 24, host.push_token.length
+    assert_equal "Push", host.display_address
+    assert_nil hosts(:one).push_token
+  end
+
+  test "DNS hosts need a domain name, a known record type and an IP address as server" do
+    host = Host.new(name: "DNS", probe_type: :dns, address: "example.com", dns_record_type: "mx", dns_server: " 1.1.1.1 ", group: groups(:one))
+    assert host.valid?
+    assert_equal "MX", host.dns_record_type
+    assert_equal "example.com MX @ 1.1.1.1", host.display_address
+
+    host.assign_attributes(address: "-x.example", dns_record_type: "SOA", dns_server: "dns.google")
+    assert_not host.valid?
+    assert host.errors.key?(:address)
+    assert host.errors.key?(:dns_record_type)
+    assert host.errors.key?(:dns_server)
+  end
+
+  test "the same name can be checked for several record types in one group" do
+    Host.create!(name: "A", probe_type: :dns, address: "example.com", group: groups(:one))
+
+    assert Host.new(name: "AAAA", probe_type: :dns, address: "example.com", dns_record_type: "AAAA", group: groups(:one)).valid?
+    assert_not Host.new(name: "A again", probe_type: :dns, address: "example.com", group: groups(:one)).valid?
+  end
+
+  test "Docker hosts need a container name and a unix or tcp Docker host" do
+    host = Host.new(name: "Nextcloud", probe_type: :docker, address: "nextcloud", group: groups(:one))
+    assert host.valid?
+    assert_equal [ :unix, "/var/run/docker.sock" ], host.docker_endpoint
+
+    host.docker_host = "tcp://socket-proxy:2375"
+    assert host.valid?
+    assert_equal [ :tcp, "socket-proxy", 2375 ], host.docker_endpoint
+
+    host.assign_attributes(address: "../../images", docker_host: "ssh://server")
+    assert_not host.valid?
+    assert host.errors.key?(:address)
+    assert host.errors.key?(:docker_host)
+  end
+
+  test "Redis hosts default to port 6379 and keep a password without a username" do
+    host = Host.create!(name: "Cache", probe_type: :redis, address: "10.0.0.5", basic_auth_password: "s3cret", group: groups(:one))
+
+    assert_equal 6379, host.port
+    assert_equal "s3cret", host.reload.basic_auth_password
+    assert_equal "10.0.0.5:6379", host.display_address
+  end
+
+  test "an HTTP password without a username is dropped, unlike a Redis one" do
+    host = Host.new(name: "Site", probe_type: :http, address: "https://example.com", basic_auth_password: "x", group: groups(:one))
+
+    assert host.valid?
+    assert_nil host.basic_auth_password
+  end
 end

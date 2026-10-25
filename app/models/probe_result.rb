@@ -4,7 +4,11 @@ class ProbeResult < ApplicationRecord
   enum :probe_type, {
     icmp: 0,
     http: 1,
-    tcp: 2
+    tcp: 2,
+    dns: 3,
+    push: 4,
+    docker: 5,
+    redis: 6
   }, default: :icmp
 
   validates :recorded_at, presence: true
@@ -15,6 +19,18 @@ class ProbeResult < ApplicationRecord
     metadata.present? ? JSON.parse(metadata) : {}
   rescue JSON::ParserError
     {}
+  end
+
+  # One line describing a passed TCP, DNS, push, Docker or Redis check.
+  def success_summary
+    metadata = parsed_metadata
+    case probe_type.to_sym
+    when :dns then Array(metadata["records"]).first(3).join(", ").presence || "Resolved"
+    when :push then metadata["message"].presence || "Push received"
+    when :docker then [ metadata["state"]&.capitalize || "Running", metadata["health"] ].compact.join(", ")
+    when :redis then "PONG"
+    else "Connected"
+    end
   end
 
   scope :downsampled_for_range, ->(start_time, interval_minutes) do

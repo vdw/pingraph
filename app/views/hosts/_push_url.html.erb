@@ -1,0 +1,36 @@
+<%
+  # The Base URL from Settings when set, so the URL works from other machines behind a proxy.
+  url = Setting.current.absolute_url(push_path(host.push_token)) || push_url(host.push_token)
+  code_class = "block w-full overflow-x-auto whitespace-pre rounded-md bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 font-mono text-xs text-gray-800 dark:text-gray-200 select-all"
+%>
+<div class="mb-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+  <div class="flex items-start justify-between gap-4 mb-3">
+    <div>
+      <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-300">Push URL</h2>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+        Call it at least every <%= host.interval %> seconds. Anyone with this URL can report for this host, so keep it private.
+      </p>
+    </div>
+    <%= button_to "New URL", regenerate_push_token_host_path(host),
+          class: "rounded-md px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 font-medium text-gray-700 dark:text-gray-200 cursor-pointer whitespace-nowrap",
+          data: { turbo_confirm: "Create a new push URL? Scripts using the current one will stop working." } %>
+  </div>
+
+  <code class="<%= code_class %>"><%= url %></code>
+
+  <div class="mt-4 space-y-3 text-xs text-gray-500 dark:text-gray-400">
+    <div>
+      <p class="mb-1">At the end of a script (<code>-f</code> makes curl fail on errors; <code>-m 10</code> gives up after 10 seconds):</p>
+      <code class="<%= code_class %>">curl -fsS -m 10 "<%= url %>"</code>
+    </div>
+    <div>
+      <p class="mb-1">After a nightly cron job, only when it succeeds (with an interval a bit over a day, such as 90000 seconds):</p>
+      <code class="<%= code_class %>">0 3 * * * /usr/local/bin/backup.sh &amp;&amp; curl -fsS -m 10 "<%= url %>" &gt;/dev/null</code>
+    </div>
+    <div>
+      <p class="mb-1">Report a failure right away, with a message and an optional time in ms (Uptime Kuma's parameters):</p>
+      <code class="<%= code_class %>">curl -fsS -m 10 "<%= url %>?status=down&amp;msg=Backup%20failed"
+curl -fsS -m 10 "<%= url %>?status=up&amp;msg=OK&amp;ping=42"</code>
+    </div>
+  </div>
+</div>

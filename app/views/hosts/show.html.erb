@@ -23,9 +23,10 @@
           <%= @host.group.name %>
         </span>
       </div>
-      <p class="text-sm text-gray-500 dark:text-gray-400 font-mono pl-6"><%= @host.address %></p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 font-mono pl-6"><%= @host.display_address %></p>
       <p class="text-xs text-gray-400 dark:text-gray-500 pl-6 mt-0.5">
-        Polled every <%= @host.interval %> seconds
+        <%= @host.probe_type_label %> ·
+        <%= @host.push? ? "Expects a push every #{@host.interval} seconds" : "Polled every #{@host.interval} seconds" %>
         <% if @host.http? %>
           · <%= @host.http_method %><%= " · keyword #{@host.keyword_invert? ? 'must not appear' : 'must appear'}" if @host.keyword.present? %>
         <% end %>
@@ -45,6 +46,10 @@
         data: { turbo_confirm: "Delete #{@host.name}? This will remove all probe history." } %>
     </div>
   </div>
+
+  <% if @host.push? %>
+    <%= render "push_url", host: @host %>
+  <% end %>
 
   <%# Probe chart %>
   <%= turbo_frame_tag "host_probe_chart" do %>
@@ -107,7 +112,7 @@
                   </span>
                 <% else %>
                   <span class="text-sm text-gray-500 dark:text-gray-400">
-                    <%= probe_result.success? ? "Connected" : (probe_result.error_message.presence || "Connection failed") %>
+                    <%= probe_result.success? ? probe_result.success_summary : (probe_result.error_message.presence || "Check failed") %>
                   </span>
                 <% end %>
               </td>
@@ -116,7 +121,9 @@
         </tbody>
       </table>
     <% else %>
-      <p class="text-sm text-gray-400 dark:text-gray-500 text-center py-8">No probes yet. They will appear here once Solid Queue starts polling.</p>
+      <p class="text-sm text-gray-400 dark:text-gray-500 text-center py-8">
+        <%= @host.push? ? "No pushes yet. Results appear here when the push URL is called." : "No probes yet. They will appear here once Solid Queue starts polling." %>
+      </p>
     <% end %>
   </div>
 

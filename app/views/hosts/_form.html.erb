@@ -9,7 +9,13 @@
   hint_class = "mt-1 text-xs text-gray-400 dark:text-gray-500"
   checkbox_class = "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
 %>
-<%= form_with(model: host, data: { controller: "probe-type-fields" }) do |form| %>
+<%
+  address_placeholders = {
+    icmp: "e.g. 1.1.1.1 or nas.local", http: "e.g. https://example.com/health", tcp: "e.g. 192.168.1.10",
+    dns: "e.g. example.com", docker: "e.g. nextcloud", redis: "e.g. 192.168.1.20"
+  }
+%>
+<%= form_with(model: host, data: { controller: "probe-type-fields", probe_type_fields_placeholders_value: address_placeholders.to_json }) do |form| %>
   <% if host.errors.any? %>
     <div class="mb-5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3">
       <p class="text-sm font-semibold text-red-700 dark:text-red-400 mb-1">
@@ -33,13 +39,16 @@
                     host.errors[:name].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
     </div>
 
-    <div>
+    <div data-probe-types="icmp http tcp dns docker redis">
       <%= form.label :address, class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
       <%= form.text_field :address,
-            placeholder: "e.g. 1.1.1.1 or google.com",
+            placeholder: address_placeholders[:icmp],
+            data: { probe_type_fields_target: "address" },
             class: ["block w-full rounded-lg border px-3 py-2 text-sm font-mono shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500",
                     "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
                     host.errors[:address].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
+      <p class="<%= hint_class %>" data-probe-types="dns">The name to look up.</p>
+      <p class="<%= hint_class %>" data-probe-types="docker">The container's name or ID, as shown by <code>docker ps</code>.</p>
     </div>
 
     <div>
@@ -49,12 +58,12 @@
         <div class="block w-full rounded-lg border border-gray-200 dark:border-gray-600 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300"
              data-probe-type-fields-target="probeType"
              data-probe-type="<%= host.probe_type %>">
-          <%= host.probe_type.upcase %>
+          <%= host.probe_type_label %>
           <span class="ml-2 text-xs text-gray-400 dark:text-gray-500">(cannot be changed — would corrupt historical data)</span>
         </div>
       <% else %>
         <%= form.select :probe_type,
-              Host.probe_types.keys.map { |value| [value.upcase, value] },
+              Host::PROBE_TYPE_LABELS.invert,
               {},
               class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white",
                       "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
@@ -66,7 +75,13 @@
       <% end %>
     </div>
 
-    <div data-probe-type-fields-target="tcpFields" class="space-y-3 hidden">
+    <div data-probe-types="push" class="hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+      Saving creates a push URL for your script, cron job or backup tool to call each time it runs.
+      The host goes Down when no push arrives for one interval, or when a push reports <code>status=down</code>.
+      Set the interval a little longer than the job's schedule, for example 90000 seconds (25 hours) for a nightly job.
+    </div>
+
+    <div data-probe-types="tcp redis" class="space-y-3 hidden">
       <div>
         <%= form.label :port, class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
         <%= form.number_field :port,
@@ -76,10 +91,39 @@
               class: ["block w-full rounded-lg border px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white",
                       "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
                       host.errors[:port].any? ? "border-red-400" : "border-gray-300 dark:border-gray-600"] %>
+        <p class="<%= hint_class %>" data-probe-types="redis">Leave blank for <%= Host::DEFAULT_REDIS_PORT %>.</p>
       </div>
     </div>
 
-    <div data-probe-type-fields-target="httpFields" class="space-y-3 hidden">
+    <div data-probe-types="dns" class="space-y-3 hidden">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <%= form.label :dns_record_type, "Record type", class: label_class %>
+          <%= form.select :dns_record_type, Host::DNS_RECORD_TYPES, {}, class: field_class.(:dns_record_type) %>
+        </div>
+        <div>
+          <%= form.label :dns_server, "DNS server", class: label_class %>
+          <%= form.text_field :dns_server, placeholder: "System resolver", class: field_class.(:dns_server, "font-mono") %>
+        </div>
+      </div>
+      <p class="<%= hint_class %>">An IP address such as 1.1.1.1 or your Pi-hole; leave blank to use the resolver Pingraph's machine uses.</p>
+      <div>
+        <%= form.label :dns_expected_value, "Expected value", class: label_class %>
+        <%= form.text_field :dns_expected_value, placeholder: "e.g. 192.168.1.10", class: field_class.(:dns_expected_value, "font-mono") %>
+        <p class="<%= hint_class %>">Optional. The check fails unless one of the answers equals this (for MX, the mail server's name).</p>
+      </div>
+    </div>
+
+    <div data-probe-types="docker" class="hidden">
+      <%= form.label :docker_host, "Docker host", class: label_class %>
+      <%= form.text_field :docker_host, placeholder: Host::DEFAULT_DOCKER_HOST, class: field_class.(:docker_host, "font-mono") %>
+      <p class="<%= hint_class %>">
+        Leave blank for the local socket (mount <code>/var/run/docker.sock</code> into Pingraph's container),
+        or use <code>tcp://host:2375</code> for a docker-socket-proxy or another machine.
+      </p>
+    </div>
+
+    <div data-probe-types="http" class="space-y-3 hidden">
       <div>
         <%= form.label :expected_status_code_range, "Expected Status", class: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" %>
         <%= form.select :expected_status_code_range,
@@ -130,7 +174,7 @@
         <p class="<%= hint_class %>">HTTPS only. One alert per certificate; leave blank to turn off.</p>
       </div>
 
-      <details class="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3" <%= "open" if (host.errors.attribute_names & %i[http_method max_redirects request_headers request_body basic_auth_user]).any? %>>
+      <details class="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3" <%= "open" if (host.errors.attribute_names & %i[http_method max_redirects request_headers request_body]).any? %>>
         <summary class="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300">Request options</summary>
 
         <div class="mt-4 space-y-3">
@@ -157,24 +201,31 @@
             <%= form.text_area :request_body, rows: 3, placeholder: "{\"ping\": true}", class: field_class.(:request_body, "font-mono") %>
             <p class="<%= hint_class %>">POST, PUT and PATCH only. Sent as JSON when it parses as JSON, otherwise as plain text; set a Content-Type header to override.</p>
           </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <%= form.label :basic_auth_user, "Basic auth username", class: label_class %>
-              <%= form.text_field :basic_auth_user, autocomplete: "off", class: field_class.(:basic_auth_user) %>
-            </div>
-            <div>
-              <%= form.label :basic_auth_password, "Password", class: label_class %>
-              <%= form.password_field :basic_auth_password, autocomplete: "new-password",
-                    placeholder: host.basic_auth_password.present? ? "•••••••• (unchanged)" : nil,
-                    class: field_class.(:basic_auth_password) %>
-            </div>
-          </div>
         </div>
       </details>
     </div>
 
-    <div data-probe-type-fields-target="timeoutFields" class="hidden">
+    <%# One set of fields: they are HTTP basic auth or Redis AUTH depending on the type. %>
+    <div data-probe-types="http redis" class="hidden">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <%= form.label :basic_auth_user, class: label_class do %>
+            <span data-probe-types="http">Basic auth username</span><span data-probe-types="redis">Username</span>
+          <% end %>
+          <%= form.text_field :basic_auth_user, autocomplete: "off", class: field_class.(:basic_auth_user) %>
+        </div>
+        <div>
+          <%= form.label :basic_auth_password, "Password", class: label_class %>
+          <%= form.password_field :basic_auth_password, autocomplete: "new-password",
+                placeholder: host.basic_auth_password.present? ? "•••••••• (unchanged)" : nil,
+                class: field_class.(:basic_auth_password) %>
+        </div>
+      </div>
+      <p class="<%= hint_class %>" data-probe-types="http">Optional. Sent only to the monitored URL, never to a redirect's target.</p>
+      <p class="<%= hint_class %>" data-probe-types="redis">Optional. For <code>requirepass</code> leave the username blank; for an ACL user, fill in both.</p>
+    </div>
+
+    <div data-probe-types="http tcp dns docker redis" class="hidden">
       <%= form.label :timeout_seconds, "Timeout", class: label_class %>
       <div class="relative">
         <%= form.number_field :timeout_seconds, min: 1, max: Host::MAX_TIMEOUT_SECONDS, class: field_class.(:timeout_seconds, "pr-16") %>

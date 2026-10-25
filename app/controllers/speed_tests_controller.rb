@@ -52,7 +52,8 @@ class SpeedTestsController < ApplicationController
   end
 
   def load_hosts
-    @hosts = Host.includes(:group).joins(:group).order("groups.name, hosts.name")
+    # Push and Docker hosts have no network address to test against.
+    @hosts = Host.where.not(probe_type: %i[push docker]).includes(:group).joins(:group).order("groups.name, hosts.name")
   end
 
   def set_selected_host

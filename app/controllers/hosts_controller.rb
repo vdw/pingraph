@@ -13,7 +13,7 @@ class HostsController < ApplicationController
     "120m" => 120
   }.freeze
 
-  before_action :set_host, only: %i[ show edit update destroy probe_results_data probe_chart ]
+  before_action :set_host, only: %i[ show edit update destroy probe_results_data probe_chart regenerate_push_token ]
 
   # GET /hosts or /hosts.json
   def index
@@ -84,6 +84,15 @@ class HostsController < ApplicationController
         format.json { render json: @host.errors, status: :unprocessable_entity }
       end
     end
+  end
+
+  # POST /hosts/1/regenerate_push_token
+  def regenerate_push_token
+    return head(:not_found) unless @host.push?
+
+    @host.regenerate_push_token
+    @host.save!
+    redirect_to @host, notice: "Created a new push URL. The old one no longer works.", status: :see_other
   end
 
   # DELETE /hosts/1 or /hosts/1.json
@@ -178,7 +187,7 @@ class HostsController < ApplicationController
     def host_params
       params.expect(host: [ :name, :address, :interval, :group_id, :probe_type, :port, :expected_status_code, :expected_status_code_range, :verify_ssl, :latency_threshold_ms, :notifications_enabled, :notify_on_degraded,
         :failure_threshold, :timeout_seconds, :http_method, :max_redirects, :keyword, :keyword_invert, :request_headers, :request_body,
-        :basic_auth_user, :basic_auth_password, :ssl_expiry_warn_days ])
+        :basic_auth_user, :basic_auth_password, :ssl_expiry_warn_days, :dns_server, :dns_record_type, :dns_expected_value, :docker_host ])
     end
 
     # The password field renders blank; a blank submission keeps the stored password.

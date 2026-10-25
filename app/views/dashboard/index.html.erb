@@ -66,7 +66,7 @@
                       <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">
                         <%= link_to host.name, host_path(host), class: "hover:text-indigo-600 dark:hover:text-indigo-400" %>
                       </td>
-                      <td class="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 font-mono"><%= host.address %></td>
+                      <td class="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 font-mono"><%= host.display_address %></td>
                       <td class="py-3 px-4 text-sm text-gray-700 dark:text-gray-200">
                         <% if probe_result&.latency %>
                           <span class="font-semibold"><%= "%.2f" % probe_result.latency %></span>
@@ -95,7 +95,7 @@
                             </span>
                           <% else %>
                             <span class="text-xs text-gray-600 dark:text-gray-300">
-                              <%= probe_result.success? ? "Connected" : (probe_result.error_message.presence || "Connection failed") %>
+                              <%= probe_result.success? ? probe_result.success_summary : (probe_result.error_message.presence || "Check failed") %>
                             </span>
                           <% end %>
                         <% else %>

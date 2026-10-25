@@ -36,3 +36,8 @@ en:
         password: "New password"
         password_confirmation: "New password confirmation"
         password_challenge: "Current password"
+      host:
+        dns_server: "DNS server"
+        dns_record_type: "Record type"
+        dns_expected_value: "Expected value"
+        docker_host: "Docker host"

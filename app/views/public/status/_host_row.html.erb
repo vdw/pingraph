@@ -14,8 +14,11 @@
     latest_result.success? ? "HTTP #{latest_result.status_code}" : (latest_result.error_message.presence || "HTTP failure")
   elsif latest_result.tcp?
     latest_result.success? ? "TCP connectivity OK" : (latest_result.error_message.presence || "Connection failure")
-  else
+  elsif latest_result.icmp?
     latest_result.packet_loss.present? ? "Packet Loss: #{latest_result.packet_loss}%" : "ICMP status unavailable"
+  else
+    # DNS answers and push messages can describe the internal network, so a pass shows no details.
+    latest_result.success? ? "Check OK" : (latest_result.error_message.presence || "Check failed")
   end
 %>
 

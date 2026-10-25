@@ -170,4 +170,74 @@ class HostsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_not_includes response.body, "Hosts are not being checked"
   end
+
+  test "creates a push host and shows its push URL" do
+    assert_difference("Host.count") do
+      post hosts_url, params: { host: { name: "Nightly backup", probe_type: "push", address: "", interval: 90_000, group_id: groups(:one).id } }
+    end
+
+    host = Host.last
+    assert host.push?
+    follow_redirect!
+    assert_response :success
+    assert_includes response.body, "/api/push/#{host.push_token}"
+  end
+
+  test "the push URL uses the Base URL from Settings" do
+    Setting.current.update_columns(base_url: "https://pingraph.example.com")
+    host = Host.create!(name: "Backups", probe_type: :push, interval: 60, group: groups(:one))
+
+    get host_url(host)
+
+    assert_includes response.body, "https://pingraph.example.com/api/push/#{host.push_token}"
+  end
+
+  test "regenerates a push token" do
+    host = Host.create!(name: "Backups", probe_type: :push, interval: 60, group: groups(:one))
+    old_token = host.push_token
+
+    post regenerate_push_token_host_url(host)
+
+    assert_redirected_to host_url(host)
+    assert_not_equal old_token, host.reload.push_token
+  end
+
+  test "creates DNS, Docker and Redis hosts" do
+    post hosts_url, params: { host: { name: "Pi-hole", probe_type: "dns", address: "nas.lan", dns_server: "192.168.1.2",
+      dns_record_type: "A", dns_expected_value: "192.168.1.10", interval: 60, group_id: groups(:one).id } }
+    assert_equal [ "192.168.1.2", "A", "192.168.1.10" ], Host.last.slice(:dns_server, :dns_record_type, :dns_expected_value).values
+
+    post hosts_url, params: { host: { name: "Nextcloud", probe_type: "docker", address: "nextcloud", docker_host: "tcp://proxy:2375",
+      interval: 60, group_id: groups(:one).id } }
+    assert_equal "tcp://proxy:2375", Host.last.docker_host
+
+    post hosts_url, params: { host: { name: "Redis", probe_type: "redis", address: "10.0.0.5", port: "", basic_auth_user: "",
+      basic_auth_password: "s3cret", interval: 60, group_id: groups(:one).id } }
+    assert_equal [ 6379, "s3cret" ], [ Host.last.port, Host.last.basic_auth_password ]
+  end
+
+  test "host pages and the dashboard show results of every probe type" do
+    group = groups(:one)
+    hosts = [
+      Host.create!(name: "DNS", probe_type: :dns, address: "example.com", group: group),
+      Host.create!(name: "Push", probe_type: :push, interval: 60, group: group),
+      Host.create!(name: "Docker", probe_type: :docker, address: "nextcloud", group: group),
+      Host.create!(name: "Redis", probe_type: :redis, address: "10.0.0.5", group: group)
+    ]
+    metadata = { "dns" => { "records" => [ "93.184.215.14" ] }, "push" => { "message" => "Backup OK" }, "docker" => { "state" => "running" }, "redis" => {} }
+    hosts.each do |host|
+      host.probe_results.create!(probe_type: host.probe_type, success: true, latency: 3.0, recorded_at: Time.current, metadata: metadata.fetch(host.probe_type).to_json)
+    end
+
+    get root_url
+    assert_response :success
+    [ "93.184.215.14", "Backup OK", "Running", "PONG" ].each { |summary| assert_includes response.body, summary }
+
+    hosts.each do |host|
+      get host_url(host)
+      assert_response :success
+      get edit_host_url(host)
+      assert_response :success
+    end
+  end
 end

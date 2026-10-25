@@ -16,6 +16,10 @@ Monitor latency trends, packet loss, and service availability in real-time with 
 - **ICMP (Ping)** — Classic latency and packet loss monitoring
 - **HTTP** — Web service checks: expected status, keyword (or keyword must be absent), redirects, any method with headers, body and basic auth, configurable timeout, and certificate expiry warnings
 - **TCP** — Port availability and connectivity checks
+- **DNS** — Resolve a name (A, AAAA, CNAME, MX, NS or TXT) through your own resolver or the system's, optionally checking the answer
+- **Push** — Cron jobs, backups and scripts call a URL when they run; the host goes down when the calls stop (same URL format as Uptime Kuma)
+- **Docker** — Container is running and healthy, through the Docker socket or a socket proxy
+- **Redis** — `PING` with optional password (also Valkey and KeyDB)
 
 ### Dashboards & Visualization
 - **Live Dashboard** — Real-time host status with color-coded health indicators (up/degraded/down)
@@ -106,6 +110,9 @@ Then open [http://localhost:3000](http://localhost:3000)
    - **Ping a host:** `1.1.1.1` (ICMP)
    - **Check a website:** `https://example.com` (HTTP)
    - **Monitor a port:** address `192.168.1.10`, port `443` (TCP)
+   - **Check your Pi-hole answers:** name `nas.lan`, DNS server `192.168.1.2`, expected value `192.168.1.10` (DNS)
+   - **Know your backup ran:** a Push host, then call its URL at the end of the backup script (Push)
+   - **Watch a container:** `nextcloud` (Docker; see [Docker checks](#docker-checks))
 3. **Set Thresholds** — Adjust latency thresholds (default 350ms) to match your needs
 4. **Create Status Pages** — Enable public status page for each group to share with users
 5. **Set Up Notifications** — Add a Telegram bot, ntfy topic, Slack webhook, SMTP details or your own webhook in Settings so you're alerted when a host goes down (see [Notifications](#notifications))
@@ -163,6 +170,14 @@ Toggle alerting per host with **Send notifications for this host** on the host's
 
 **HTTP checks:** A check passes when the final response (after following up to 10 redirects; set 0 to check the redirect itself) has the expected status and, if set, contains the keyword (or doesn't, when inverted). The keyword is case-sensitive and matched against the first 1 MB of the body. Custom headers and basic auth are sent only to the monitored URL's host, never to a host a redirect points to. The timeout (default 5 seconds) applies to connecting and to each read, and also to TCP checks. Hosts created before redirects were supported keep not following them until you change it.
 
+**DNS checks:** The name is resolved through the DNS server you enter (an IP address such as `1.1.1.1` or your Pi-hole), or the resolver of the machine Pingraph runs on when left blank. The check fails when there's no record of the chosen type, or none equals the expected value when one is set (names compare without case or a trailing dot; for MX, enter the mail server's name). The resolve time is charted as latency.
+
+**Push checks:** Saving a Push host creates a URL like `https://pingraph.example.com/api/push/<token>`. Call it with GET or POST whenever the job runs, for example `curl -fsS -m 10 "<url>"` at the end of a script. If no call arrives for one interval (plus 10 seconds), the check fails; with the default *Confirm after 2*, the host goes Down after two intervals. Add `?status=down&msg=...` to report a failure right away, and `ping=<ms>` to chart a duration. These are Uptime Kuma's push parameters, so existing scripts only need the new URL. The token is the only secret: anyone with the URL can report for that host. *New URL* on the host page replaces it. The URL uses the Base URL from Settings when set.
+
+**Docker checks:** See [Docker checks](#docker-checks) for giving Pingraph access. A container passes when it is running, not paused and, if it has a health check, not *unhealthy* (a health check that is still *starting* passes). Exited containers fail with their exit code.
+
+**Redis checks:** Sends `PING` and expects `PONG`, after `AUTH` when a password is set (leave the username blank for `requirepass`, or fill in both for an ACL user). The port defaults to 6379. TLS connections aren't supported.
+
 **Certificate expiry:** HTTPS checks record when the server's certificate expires; the host page shows it. When it is within the host's warning window (default 14 days, blank to turn off), each notification channel gets one *certificate expires in N days* alert. A renewed certificate starts over. With *Verify SSL certificate* on, an expired certificate also fails the check.
 
 **Latency & Loss:** Probes capture min/average/max latency, jitter (ICMP) and packet loss percentage. Failed checks have no latency, so timeouts don't show up as spikes on the chart.
@@ -173,7 +188,7 @@ Toggle alerting per host with **Send notifications for this host** on the host's
 - **Down** — N failed checks in a row
 - **Unknown** — Never probed, or fewer than N checks so far and they had problems
 
-**Capacity:** Each worker thread runs one check at a time, so roughly *hosts ≈ `JOB_THREADS` × interval ÷ check time*. A ping check takes about 1 second (3 seconds when the host doesn't answer); an HTTP or TCP check takes its response time, up to its timeout. With the default 5 threads and 60-second intervals that is about 300 ping hosts, or 100 if they could all be down at once. Size for the worst case: hosts are slowest to check exactly when they're down. The amber "checks are running late" banner tells you when to raise `JOB_THREADS`.
+**Capacity:** Each worker thread runs one check at a time, so roughly *hosts ≈ `JOB_THREADS` × interval ÷ check time*. A ping check takes about 1 second (3 seconds when the host doesn't answer); an HTTP, TCP, DNS, Docker or Redis check takes its response time, up to its timeout, and push checks cost almost nothing. With the default 5 threads and 60-second intervals that is about 300 ping hosts, or 100 if they could all be down at once. Size for the worst case: hosts are slowest to check exactly when they're down. The amber "checks are running late" banner tells you when to raise `JOB_THREADS`.
 
 **Uptime %:** Measured over the time Pingraph was actually monitoring. If Pingraph itself was stopped, that time isn't counted as uptime; the status page shows how much of the day was monitored.
 
@@ -213,6 +228,39 @@ docker compose up -d
 
 The image has a health check (`GET /health`), so `docker ps` shows the container as
 *unhealthy* when checks stop running, not only when the web server is down.
+
+### Docker checks
+
+Docker hosts ask the Docker Engine API about a container. Pingraph needs access to it in one of two ways.
+
+**Through a socket proxy (recommended).** Access to the Docker socket is equivalent to root on the machine, so give Pingraph a read-only proxy that only answers container queries, and set the host's *Docker host* to `tcp://docker-proxy:2375`:
+
+```yaml
+services:
+  pingraph:
+    # ... as above
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy
+    environment:
+      CONTAINERS: 1   # allow /containers/... (read-only: POST is off by default)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+```
+
+The same works for containers on another machine running such a proxy: `tcp://192.168.1.30:2375`.
+
+**Through the socket directly.** Mount it and add the socket's group, since Pingraph doesn't run as root. Leave *Docker host* blank:
+
+```yaml
+    volumes:
+      - pingraph_storage:/rails/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - "999"   # the socket's group ID: stat -c %g /var/run/docker.sock
+```
+
+Pingraph itself only reads container status. With the socket mounted directly, though, a security hole in Pingraph would hand an attacker control of Docker, and with it the machine; the proxy limits that to reading container details.
 
 ### Systemd Service
 

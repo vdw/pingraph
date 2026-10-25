@@ -1,7 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
+// Shows the fields that apply to the selected probe type: any element with
+// data-probe-types="http tcp" is visible only for those types.
 export default class extends Controller {
-  static targets = ["probeType", "tcpFields", "httpFields", "timeoutFields", "statusRange", "expectedCodeField"]
+  static targets = ["probeType", "address", "statusRange", "expectedCodeField"]
+  static values = { placeholders: Object }
 
   connect() {
     this.update()
@@ -10,9 +13,12 @@ export default class extends Controller {
   update() {
     const probeType = this.currentProbeType()
 
-    this.toggle(this.tcpFieldsTarget, probeType === "tcp")
-    this.toggle(this.httpFieldsTarget, probeType === "http")
-    this.toggle(this.timeoutFieldsTarget, probeType === "http" || probeType === "tcp")
+    this.element.querySelectorAll("[data-probe-types]").forEach((element) => {
+      this.toggle(element, element.dataset.probeTypes.split(" ").includes(probeType))
+    })
+    if (this.hasAddressTarget && this.placeholdersValue[probeType]) {
+      this.addressTarget.placeholder = this.placeholdersValue[probeType]
+    }
     this.toggleExpectedCode()
   }
 
@@ -21,8 +27,9 @@ export default class extends Controller {
     this.toggle(this.expectedCodeFieldTarget, showExpectedCode)
   }
 
+  // A select on the new form; on the edit form, a read-only element carrying data-probe-type.
   currentProbeType() {
-    return this.probeTypeTarget.value
+    return this.probeTypeTarget.value ?? this.probeTypeTarget.dataset.probeType
   }
 
   toggle(element, show) {

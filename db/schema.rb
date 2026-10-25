@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_24_120012) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_120013) do
   create_table "groups", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -28,6 +28,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_120012) do
     t.integer "consecutive_failures", default: 0, null: false
     t.integer "consecutive_issues", default: 0, null: false
     t.datetime "created_at", null: false
+    t.string "dns_expected_value"
+    t.string "dns_record_type", default: "A", null: false
+    t.string "dns_server"
+    t.string "docker_host"
     t.integer "expected_status_code", default: 200, null: false
     t.string "expected_status_code_range", default: "exact", null: false
     t.integer "failure_threshold", default: 2, null: false
@@ -47,6 +51,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_120012) do
     t.boolean "notify_on_degraded", default: false, null: false
     t.integer "port"
     t.integer "probe_type", default: 0, null: false
+    t.datetime "push_received_at"
+    t.string "push_token"
     t.text "request_body"
     t.text "request_headers"
     t.datetime "ssl_expires_at"
@@ -62,6 +68,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_120012) do
     t.index ["group_id", "status"], name: "index_hosts_on_group_id_and_status"
     t.index ["group_id"], name: "index_hosts_on_group_id"
     t.index ["next_probe_at"], name: "index_hosts_on_next_probe_at"
+    t.index ["push_token"], name: "index_hosts_on_push_token", unique: true
   end
 
   create_table "notification_deliveries", force: :cascade do |t|

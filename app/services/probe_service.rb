@@ -1,5 +1,7 @@
+require "io/wait"
 require "net/http"
 require "open3"
+require "resolv"
 require "socket"
 require "timeout"
 require "uri"
@@ -38,6 +40,16 @@ class ProbeService
     "PATCH" => Net::HTTP::Patch, "DELETE" => Net::HTTP::Delete, "OPTIONS" => Net::HTTP::Options
   }.freeze
   REDIRECT_CODES = [ 301, 302, 303, 307, 308 ].freeze
+  DNS_RESOURCE_CLASSES = {
+    "A" => Resolv::DNS::Resource::IN::A, "AAAA" => Resolv::DNS::Resource::IN::AAAA,
+    "CNAME" => Resolv::DNS::Resource::IN::CNAME, "MX" => Resolv::DNS::Resource::IN::MX,
+    "NS" => Resolv::DNS::Resource::IN::NS, "TXT" => Resolv::DNS::Resource::IN::TXT
+  }.freeze
+  # A push that arrives up to this long after the interval still counts, so a cron job
+  # running a few seconds late doesn't fail the check.
+  PUSH_GRACE = 10.seconds
+  # Docker and Redis replies are read up to this size (a container inspect is ~10-30 KB).
+  SOCKET_READ_LIMIT = 1.megabyte
 
   # iputils: "rtt min/avg/max/mdev = 1/2/3/4 ms"; BSD/macOS: "round-trip min/avg/max/stddev";
   # BusyBox: "round-trip min/avg/max = 1/2/3 ms" (no jitter).
@@ -45,12 +57,39 @@ class ProbeService
 
   def self.execute(host)
     result = run_probe(host)
+    # A push host that received a push recently: the push itself was already recorded.
+    return if result.nil?
 
+    record!(host, result)
+  end
+
+  # Saves a result, from a check or a push, and sends the alerts it triggers.
+  def self.record!(host, result)
     # Deliberately outside run_probe's rescue: a database error while saving (e.g. SQLite
     # busy) must raise and be retried by ProbeJob, never be recorded as a host failure.
     deliveries = persist_result!(host, result)
     enqueue_notifications(deliveries)
     result
+  end
+
+  # A push to /api/push/:token, in Uptime Kuma's format: status "up" (the default) or
+  # "down", an optional message, and an optional ping in milliseconds.
+  def self.record_push!(host, status: nil, message: nil, ping: nil)
+    down = status.to_s.strip.downcase == "down"
+    message = message.to_s.strip.truncate(255).presence
+    latency = Float(ping, exception: false) unless down
+    latency = nil unless latency&.finite? && latency >= 0
+
+    result = Result.new(
+      probe_type: :push,
+      success: !down,
+      latency: latency,
+      error_message: down ? (message || "Reported down") : nil,
+      metadata: { "message" => message }.compact,
+      recorded_at: Time.current
+    )
+    host.update_column(:push_received_at, result.recorded_at)
+    record!(host, result)
   end
 
   def self.run_probe(host)
@@ -59,6 +98,14 @@ class ProbeService
       probe_http(host)
     when :tcp
       probe_tcp(host)
+    when :dns
+      probe_dns(host)
+    when :push
+      probe_push(host)
+    when :docker
+      probe_docker(host)
+    when :redis
+      probe_redis(host)
     else
       probe_icmp(host)
     end
@@ -268,6 +315,200 @@ class ProbeService
     )
   end
 
+  # Resolves host.address with the host's resolver (or the system's). Passes when there is at
+  # least one record of the type, and one equals dns_expected_value when that is set.
+  def self.probe_dns(host)
+    start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    config = host.dns_server.present? ? { nameserver: [ host.dns_server ] } : Resolv::DNS::Config.default_config_hash
+    records = Resolv::DNS.open(config.merge(raise_timeout_errors: true)) do |dns|
+      dns.timeouts = host.timeout_seconds
+      dns.getresources(host.address, DNS_RESOURCE_CLASSES.fetch(host.dns_record_type)).map { |record| dns_record_value(record) }
+    end
+    error_message =
+      if records.empty?
+        "No #{host.dns_record_type} records found for #{host.address}"
+      elsif host.dns_expected_value.present? && !records.include?(normalized_dns_value(host, host.dns_expected_value))
+        "Expected #{host.dns_expected_value}, got #{records.first(3).join(', ')}"
+      end
+
+    Result.new(
+      probe_type: :dns,
+      success: error_message.nil?,
+      latency: error_message.nil? ? elapsed_ms(start) : nil,
+      error_message: error_message,
+      metadata: { "records" => records.first(10), "elapsed_ms" => (elapsed_ms(start) if error_message) }.compact,
+      recorded_at: Time.current
+    )
+  rescue Resolv::ResolvError, SystemCallError, IOError, SocketError => e
+    message = e.message.start_with?("DNS resolv timeout") ? "Timed out after #{host.timeout_seconds} seconds" : e.message
+    failed_check(:dns, message, start, e)
+  end
+
+  # Pushes are recorded as they arrive (record_push!). The scheduled check only records a
+  # failure once none has arrived for an interval; nil means there is nothing to record.
+  def self.probe_push(host)
+    last_push = host.push_received_at || host.created_at
+    return nil if last_push > Time.current - host.interval.seconds - PUSH_GRACE
+
+    Result.new(
+      probe_type: :push,
+      success: false,
+      error_message: host.push_received_at ? "No push received in #{host.interval} seconds" : "No push received yet",
+      metadata: {},
+      recorded_at: Time.current
+    )
+  end
+
+  # Asks the Docker Engine API about one container, over the local socket or TCP (e.g. a
+  # docker-socket-proxy). Up = running, not paused, and not unhealthy if it has a health check.
+  def self.probe_docker(host)
+    start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    status_code, body = docker_get(host, "/containers/#{host.address}/json", start + host.timeout_seconds)
+
+    unless status_code == 200
+      message = status_code == 404 ? "Container \"#{host.address}\" not found" : "Docker API returned HTTP #{status_code}"
+      api_message = (JSON.parse(body)["message"] rescue nil) unless status_code == 404
+      return failed_check(:docker, [ message, api_message ].compact.join(": "), start)
+    end
+
+    state = JSON.parse(body).fetch("State", {})
+    health = state.dig("Health", "Status")
+    error_message =
+      if !state["Running"]
+        exit_code = " (exit code #{state['ExitCode']})" if state["Status"] == "exited"
+        "Container is #{state['Status'].presence || 'not running'}#{exit_code}"
+      elsif state["Paused"]
+        "Container is paused"
+      elsif health == "unhealthy"
+        "Container is unhealthy"
+      end
+    return failed_check(:docker, error_message, start) if error_message
+
+    Result.new(
+      probe_type: :docker,
+      success: true,
+      latency: elapsed_ms(start),
+      metadata: { "state" => state["Status"], "health" => health }.compact,
+      recorded_at: Time.current
+    )
+  rescue Errno::ENOENT, Errno::EACCES => e
+    path = host.docker_endpoint&.second
+    message = e.is_a?(Errno::ENOENT) ? "Docker socket #{path} not found; mount it into the Pingraph container" \
+                                     : "No permission to use the Docker socket #{path}; see the README"
+    failed_check(:docker, message, start, e)
+  rescue SystemCallError, IOError, SocketError, Timeout::Error, JSON::ParserError => e
+    message = e.is_a?(Timeout::Error) ? "Timed out after #{host.timeout_seconds} seconds" : e.message
+    failed_check(:docker, message, start, e)
+  end
+
+  # One GET over HTTP/1.0, so the daemon closes the connection after the reply. Returns
+  # [status code, body].
+  def self.docker_get(host, path, deadline)
+    kind, *target = host.docker_endpoint || raise(ArgumentError, "Invalid Docker host #{host.docker_host}")
+    socket = kind == :unix ? Socket.unix(target.first) : Socket.tcp(*target, connect_timeout: host.timeout_seconds)
+    socket.write("GET #{path} HTTP/1.0\r\nHost: docker\r\nUser-Agent: Pingraph\r\n\r\n")
+
+    head, body = read_socket(socket, deadline).split("\r\n\r\n", 2)
+    status_code = head.to_s[%r{\AHTTP/\d(?:\.\d)? (\d{3})}, 1].to_i
+    body = dechunk(body.to_s) if head.to_s.match?(/^transfer-encoding:\s*chunked/i)
+    [ status_code, body.to_s.force_encoding(Encoding::UTF_8) ]
+  ensure
+    socket&.close
+  end
+
+  # PING over the Redis protocol, after AUTH when a password is set. Also works with Valkey
+  # and KeyDB; TLS isn't supported.
+  def self.probe_redis(host)
+    start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    deadline = start + host.timeout_seconds
+
+    reply = Socket.tcp(host.address, host.port, connect_timeout: host.timeout_seconds) do |socket|
+      if host.basic_auth_password.present?
+        auth = redis_command(socket, deadline, "AUTH", *[ host.basic_auth_user, host.basic_auth_password ].compact)
+        next auth unless auth == "+OK"
+      end
+      redis_command(socket, deadline, "PING")
+    end
+    return failed_check(:redis, redis_error_message(reply), start) unless reply == "+PONG"
+
+    Result.new(probe_type: :redis, success: true, latency: elapsed_ms(start), metadata: {}, recorded_at: Time.current)
+  rescue SystemCallError, IOError, SocketError, Timeout::Error => e
+    message = e.is_a?(Timeout::Error) ? "Timed out after #{host.timeout_seconds} seconds" : e.message
+    failed_check(:redis, message, start, e)
+  end
+
+  # Sends one command and returns the first line of the reply ("+PONG", "-NOAUTH ...").
+  def self.redis_command(socket, deadline, *args)
+    socket.write("*#{args.size}\r\n" + args.map { |arg| "$#{arg.bytesize}\r\n#{arg}\r\n" }.join)
+    read_socket(socket, deadline) { |buffer| buffer.include?("\r\n") }.lines.first.to_s.chomp
+  end
+
+  def self.redis_error_message(reply)
+    return "Redis closed the connection" if reply.blank?
+
+    "Redis replied: #{reply.delete_prefix('-').force_encoding(Encoding::UTF_8).scrub.truncate(200)}"
+  end
+
+  # Reads until the peer closes the connection, the block says the reply is complete, or
+  # SOCKET_READ_LIMIT; raises Timeout::Error at the (monotonic) deadline.
+  def self.read_socket(socket, deadline)
+    buffer = String.new
+    loop do
+      chunk = socket.read_nonblock(16.kilobytes, exception: false)
+      case chunk
+      when :wait_readable
+        remaining = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        raise Timeout::Error if remaining <= 0 || !socket.wait_readable(remaining)
+      when nil
+        return buffer
+      else
+        buffer << chunk
+        return buffer if buffer.bytesize >= SOCKET_READ_LIMIT || (block_given? && yield(buffer))
+      end
+    end
+  end
+
+  def self.dechunk(body)
+    decoded = String.new
+    loop do
+      size_line, body = body.split("\r\n", 2)
+      size = size_line.to_s.to_i(16)
+      break if size.zero? || body.nil?
+
+      decoded << body.byteslice(0, size)
+      body = body.byteslice((size + 2)..).to_s
+    end
+    decoded
+  end
+
+  def self.dns_record_value(record)
+    case record
+    when Resolv::DNS::Resource::IN::A, Resolv::DNS::Resource::IN::AAAA then record.address.to_s.downcase
+    when Resolv::DNS::Resource::MX then record.exchange.to_s.downcase
+    when Resolv::DNS::Resource::TXT then record.strings.join
+    else record.name.to_s.downcase
+    end
+  end
+
+  # Expected values are compared the way records are rendered: TXT exactly, names without
+  # case or a trailing dot, IPv6 addresses in their short form.
+  def self.normalized_dns_value(host, value)
+    return value if host.dns_record_type == "TXT"
+
+    value = value.downcase.delete_suffix(".")
+    host.dns_record_type == "AAAA" && NetworkAddress.ip?(value) ? IPAddr.new(value).to_s : value
+  end
+
+  def self.failed_check(probe_type, error_message, start, error = nil)
+    Result.new(
+      probe_type: probe_type,
+      success: false,
+      error_message: error_message,
+      metadata: { "error_class" => error&.class&.name, "elapsed_ms" => elapsed_ms(start) }.compact,
+      recorded_at: Time.current
+    )
+  end
+
   # Status from consecutive samples, with threshold = the host's failure_threshold:
   #   threshold failures in a row               => down
   #   threshold problem samples in a row        => degraded (failed, slow or lossy)
@@ -362,5 +603,6 @@ class ProbeService
   def self.elapsed_ms(start)
     ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - start) * 1000.0).round(2)
   end
-  private_class_method :http_request, :http_result, :redirect_uri, :json?, :persist_result!, :enqueue_notifications, :icmp_failure_result, :ping_error_message, :elapsed_ms
+  private_class_method :http_request, :http_result, :redirect_uri, :json?, :persist_result!, :enqueue_notifications, :icmp_failure_result, :ping_error_message, :elapsed_ms,
+    :docker_get, :redis_command, :redis_error_message, :read_socket, :dechunk, :dns_record_value, :normalized_dns_value, :failed_check
 end

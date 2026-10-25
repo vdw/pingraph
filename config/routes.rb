@@ -10,6 +10,7 @@ Rails.application.routes.draw do
     member do
       get :probe_chart
       get :probe_results_data
+      post :regenerate_push_token
     end
   end
 
@@ -33,6 +34,9 @@ Rails.application.routes.draw do
   resource :account, only: [ :edit, :update ]
   resource :session
   resources :passwords, param: :token
+
+  # Push monitors (Uptime Kuma's URL format).
+  match "/api/push/:token", to: "push#create", via: %i[ get post ], as: :push, format: false
 
   # Health check: /up answers when the app boots, /health also checks that probes are running.
   get "up" => "rails/health#show", as: :rails_health_check
